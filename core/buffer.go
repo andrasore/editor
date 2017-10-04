@@ -19,7 +19,7 @@ type defaultBuffer struct {
 
 func NewBuffer(reader io.Reader) Buffer {
 	bufioReader := bufio.NewReader(reader)
-	content := make([]rune, 1024)
+	content := make([]rune, 0)
 
 	r, _, err := bufioReader.ReadRune()
 
@@ -32,11 +32,11 @@ func NewBuffer(reader io.Reader) Buffer {
 		panic("Buffer done fucked up")
 	}
 
-	initialEdit := edit{0, len(content), content}
+	initialEdit := edit{content, 0, len(content)}
 
 	return &defaultBuffer{
 		content,
-		make([]rune, 1024),
+		make([]rune, 0),
 		[]edit{initialEdit},
 	}
 }
@@ -47,27 +47,61 @@ func NewEmptyBuffer() Buffer {
 
 func (b *defaultBuffer) Insert(text []rune, from, to int) {
 	b.userData = append(b.userData, text...)
-	newEdit := edit{len(b.userData) - 1, len(text), b.userData}
-	applyNewEdit(b.edits, newEdit, from, to)
+
+	newEdit := edit{b.userData, len(b.userData), len(text)}
+
+	b.edits = getNewEdits(*b, newEdit, from, to)
 }
 
-func (b *defaultBuffer) Read(from, to int) []rune {
-	return make([]rune, to-from)
+func (b *defaultBuffer) Read(from, length int) (text []rune) {
+	toRead := length
+	b.iterateEdits(func(textIndex int, e edit) bool {
+		if textIndex <= from {
+			if e.length < toRead {
+				text = append(text, e.data[e.from:e.from+e.length]...)
+				toRead -= e.length
+			} else {
+				text = append(text, e.data[e.from:e.from+toRead]...)
+				return true
+			}
+		}
+		return false
+	})
+	return
 }
 
-func applyNewEdit(edits []edit, e edit, from int, to int) {
-	currentLength := 0
-	var affectedEditIndices []int
-
-	for i, e := range edits {
+func (b *defaultBuffer) iterateEdits(iterFunc func(int, edit) bool) {
+	previousLength, currentLength := 0, 0
+	for _, e := range b.edits {
+		previousLength = currentLength
 		currentLength += e.length
-		if from <= currentLength {
-			affectedEditIndices = append(affectedEditIndices, i)
+		if iterFunc(previousLength, e) {
+			break
 		}
 	}
 }
 
+func getNewEdits(b defaultBuffer, pastedEdit edit, from, to int) []edit {
+	var newEdits []edit
+
+	b.iterateEdits(func(textIndex int, e edit) bool {
+		if from < textIndex+e.length {
+			splitEdit := edit{e.data, textIndex, from - textIndex}
+			newEdits = append(newEdits, splitEdit, pastedEdit)
+		} else {
+			newEdits = append(newEdits, e)
+		}
+
+		if to <= textIndex+e.length {
+			return true
+		}
+		return false
+	})
+
+	return newEdits
+}
+
 type edit struct {
-	from, length int
 	data         []rune
+	from, length int
 }
