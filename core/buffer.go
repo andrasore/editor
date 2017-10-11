@@ -9,6 +9,7 @@ import (
 type Buffer interface {
 	Insert(text []rune, from, to int)
 	Read(from, to int) []rune
+	Size() int
 }
 
 type defaultBuffer struct {
@@ -17,7 +18,7 @@ type defaultBuffer struct {
 	edits    []edit
 }
 
-func NewBuffer(reader io.Reader) Buffer {
+func newDefaultBuffer(reader io.Reader) *defaultBuffer {
 	bufioReader := bufio.NewReader(reader)
 	content := make([]rune, 0)
 
@@ -29,7 +30,7 @@ func NewBuffer(reader io.Reader) Buffer {
 	}
 
 	if err != io.EOF {
-		panic("Buffer done fucked up")
+		panic("Todo: implement error handling")
 	}
 
 	initialEdit := edit{content, 0, len(content)}
@@ -41,44 +42,44 @@ func NewBuffer(reader io.Reader) Buffer {
 	}
 }
 
+func NewBuffer(reader io.Reader) Buffer {
+	return newDefaultBuffer(reader)
+}
+
 func NewEmptyBuffer() Buffer {
 	return NewBuffer(strings.NewReader(""))
 }
 
-func (b *defaultBuffer) Insert(text []rune, from, to int) {
-	b.userData = append(b.userData, text...)
-
-	newEdit := edit{b.userData, len(b.userData), len(text)}
-
-	b.edits = getNewEdits(*b, newEdit, from, to)
+func isIndexInEdit(index, indexInText, editLength int) bool {
+	return index < indexInText+editLength
 }
 
 func (b *defaultBuffer) Read(from, length int) (text []rune) {
-	toRead := length
-	b.iterateEdits(func(textIndex int, e edit) bool {
-		if textIndex <= from {
-			if e.length < toRead {
-				text = append(text, e.data[e.from:e.from+e.length]...)
-				toRead -= e.length
-			} else {
-				text = append(text, e.data[e.from:e.from+toRead]...)
-				return true
-			}
+	indexInText := 0
+	charsToRead := length
+	for _, e := range b.edits {
+		if isIndexInEdit(from, indexInText, e.length) {
+			readOffset := max(from, indexInText) - indexInText
+			readBegin := e.dataIndex + readOffset
+			currentReadSize := min(e.length-readOffset, charsToRead)
+			text = append(text, e.data[readBegin:readBegin+currentReadSize]...)
+			charsToRead -= currentReadSize
 		}
-		return false
-	})
+		if charsToRead == 0 {
+			break
+		}
+		indexInText += e.length
+	}
 	return
 }
 
-func (b *defaultBuffer) iterateEdits(iterFunc func(int, edit) bool) {
-	previousLength, currentLength := 0, 0
-	for _, e := range b.edits {
-		previousLength = currentLength
-		currentLength += e.length
-		if iterFunc(previousLength, e) {
-			break
-		}
-	}
+func (b *defaultBuffer) Insert(text []rune, from, to int) {
+	editBegin := len(b.userData)
+	b.userData = append(b.userData, text...)
+
+	newEdit := edit{b.userData, editBegin, len(text)}
+
+	b.edits = getNewEdits(*b, newEdit, from, to)
 }
 
 func getNewEdits(b defaultBuffer, pastedEdit edit, from, to int) []edit {
@@ -101,7 +102,37 @@ func getNewEdits(b defaultBuffer, pastedEdit edit, from, to int) []edit {
 	return newEdits
 }
 
+func (b defaultBuffer) iterateEdits(iterFunc func(int, edit) bool) {
+	previousLength := 0
+	for _, e := range b.edits {
+		if iterFunc(previousLength, e) {
+			break
+		}
+		previousLength += e.length
+	}
+}
+
+func (b defaultBuffer) Size() int {
+	return 0
+}
+
+func max(a, b int) int {
+	if a < b {
+		return b
+	} else {
+		return a
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
+	}
+}
+
 type edit struct {
-	data         []rune
-	from, length int
+	data              []rune
+	dataIndex, length int
 }

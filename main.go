@@ -2,34 +2,17 @@ package main
 
 import (
 	"editor/core"
+
 	"github.com/nsf/termbox-go"
 )
 
-func getStatus(status int) Status {
-	switch status {
-	case core.StatusNormal:
-		return Status{"Normal", termbox.ColorBlack, termbox.ColorWhite}
-	case core.StatusInsert:
-		return Status{"Insert", termbox.ColorWhite, termbox.ColorBlack}
-	default:
-		panic(2)
-	}
-}
-
-type Status struct {
-	name string
-	bg   termbox.Attribute
-	fg   termbox.Attribute
-}
-
 func printStatus(statusInt int) {
-	status := getStatus(statusInt)
-	x, y := 0, 0
-	for _, c := range status.name {
-		termbox.SetCell(x, y, c, status.fg, status.bg)
-		x++
-	}
-	termbox.Flush()
+	//x, y := 0, 0
+	//for _, c := range status.name {
+	//termbox.SetCell(x, y, c, status.fg, status.bg)
+	//x++
+	//}
+	//termbox.Flush()
 }
 
 func printText(text string, x, y int) {
