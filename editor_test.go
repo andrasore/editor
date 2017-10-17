@@ -26,5 +26,7 @@ func TestBuffer_Insert(t *testing.T) {
 func TestBuffer_InsertOverwrite(t *testing.T) {
 	buf := core.NewBuffer(strings.NewReader("0123456789"))
 	buf.Insert([]rune("asdf"), 0, 5)
-	assert.Equal(t, "asdf456789", string(buf.Read(0, 10)))
+	assert.Equal(t, "asdf56789", string(buf.Read(0, 10)))
+	buf.Insert([]rune("xx"), 2, 0)
+	assert.Equal(t, "asxxdf5678", string(buf.Read(0, 10)))
 }
