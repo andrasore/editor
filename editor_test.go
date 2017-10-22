@@ -16,17 +16,17 @@ func TestBuffer_Read(t *testing.T) {
 	assert.Equal(t, "123", string(buf.Read(1, 3)))
 }
 
-func TestBuffer_Insert(t *testing.T) {
+func TestBuffer_InsertEmpty(t *testing.T) {
 	buf := core.NewEmptyBuffer()
-	buf.Insert([]rune("asdf"), 0, 0)
+	buf.Insert([]rune("asdf"), 0)
 	result := buf.Read(0, 4)
 	assert.Equal(t, "asdf", string(result))
 }
 
-func TestBuffer_InsertOverwrite(t *testing.T) {
+func TestBuffer_Insert(t *testing.T) {
 	buf := core.NewBuffer(strings.NewReader("0123456789"))
-	buf.Insert([]rune("asdf"), 0, 5)
-	assert.Equal(t, "asdf56789", string(buf.Read(0, 10)))
-	buf.Insert([]rune("xx"), 2, 0)
-	assert.Equal(t, "asxxdf5678", string(buf.Read(0, 10)))
+	buf.Insert([]rune("asdf"), 0)
+	assert.Equal(t, "asdf012345", string(buf.Read(0, 10)))
+	buf.Insert([]rune("xx"), 2)
+	assert.Equal(t, "asxxdf0123", string(buf.Read(0, 10)))
 }

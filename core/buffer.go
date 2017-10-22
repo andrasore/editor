@@ -7,15 +7,16 @@ import (
 )
 
 type Buffer interface {
-	Insert(text []rune, from, to int)
-	Read(from, to int) []rune
+	Insert(text []rune, from int)
+	Delete(from, length int)
+	Read(from, length int) []rune
 	Size() int
 }
 
 type defaultBuffer struct {
 	data     []rune
 	userData []rune
-	edits    []edit
+	edits    []edit //TODO - make this a linked list instead
 }
 
 func newDefaultBuffer(reader io.Reader) *defaultBuffer {
@@ -35,10 +36,15 @@ func newDefaultBuffer(reader io.Reader) *defaultBuffer {
 
 	initialEdit := edit{content, 0, len(content)}
 
+	var edits []edit
+	if len(content) != 0 {
+		edits = []edit{initialEdit}
+	}
+
 	return &defaultBuffer{
 		content,
 		make([]rune, 0),
-		[]edit{initialEdit},
+		edits,
 	}
 }
 
@@ -75,37 +81,44 @@ func (b *defaultBuffer) Read(from, length int) (text []rune) {
 	return
 }
 
-func (b *defaultBuffer) Insert(text []rune, from, to int) {
+func (b *defaultBuffer) Insert(text []rune, from int) {
 	editBegin := len(b.userData)
 	b.userData = append(b.userData, text...)
 	newEdit := edit{b.userData, editBegin, len(text)}
-	b.edits = getNewEdits(*b, newEdit, from, to)
+
+	if len(b.edits) == 0 {
+		b.edits = []edit{newEdit}
+	} else {
+		b.edits = insertIntoEdits(b.edits, newEdit, from)
+	}
 }
 
 func isIndexInEdit(index, editBegin, editLength int) bool {
 	return editBegin <= index && index < editBegin+editLength
 }
 
-func getNewEdits(b defaultBuffer, pastedEdit edit, from, to int) []edit {
+func insertIntoEdits(edits []edit, pastedEdit edit, from int) []edit {
 	var newEdits []edit
 
 	indexInText := 0
-	for _, e := range b.edits {
-		containsFrom := isIndexInEdit(from, indexInText, e.length)
-		containsTo := isIndexInEdit(to, indexInText, e.length)
+	for _, e := range edits {
+		if isIndexInEdit(from, indexInText, e.length) {
+			newEditOffset := from - indexInText
 
-		switch {
-		case containsFrom && containsTo:
-			firstSplitEdit := edit{e.data, indexInText, from - indexInText}
-			secondSplitEdit := edit{e.data, to, (indexInText + e.length) - to}
+			firstSplitEdit := edit{
+				e.data,
+				indexInText,
+				newEditOffset,
+			}
+
+			secondSplitEdit := edit{
+				e.data,
+				indexInText + newEditOffset,
+				e.length - newEditOffset,
+			}
+
 			newEdits = append(newEdits, firstSplitEdit, pastedEdit, secondSplitEdit)
-		case containsFrom:
-			splitEdit := edit{e.data, indexInText, from - indexInText}
-			newEdits = append(newEdits, splitEdit, pastedEdit)
-		case containsTo:
-			splitEdit := edit{e.data, to, (indexInText + e.length) - to}
-			newEdits = append(newEdits, splitEdit, pastedEdit)
-		default:
+		} else {
 			newEdits = append(newEdits, e)
 		}
 
@@ -117,6 +130,10 @@ func getNewEdits(b defaultBuffer, pastedEdit edit, from, to int) []edit {
 
 func (b defaultBuffer) Size() int {
 	return 0
+}
+
+func (b defaultBuffer) Delete(from, length int) {
+
 }
 
 func max(a, b int) int {
