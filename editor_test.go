@@ -30,3 +30,16 @@ func TestBuffer_Insert(t *testing.T) {
 	buf.Insert([]rune("xx"), 2)
 	assert.Equal(t, "asxxdf0123", string(buf.Read(0, 10)))
 }
+
+func TestBuffer_Delete(t *testing.T) {
+	buf := core.NewBuffer(strings.NewReader("0123456789"))
+	buf.Delete(3, 2)
+	assert.Equal(t, "01256789", string(buf.Read(0, 8)))
+}
+
+func TestBuffer_DeleteMultiple(t *testing.T) {
+	buf := core.NewBuffer(strings.NewReader("0123456789"))
+	buf.Insert([]rune("asdf"), 4)
+	buf.Delete(2, 4)
+	assert.Equal(t, "01df456789", string(buf.Read(0, 10)))
+}

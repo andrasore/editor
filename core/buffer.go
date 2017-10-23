@@ -14,9 +14,8 @@ type Buffer interface {
 }
 
 type defaultBuffer struct {
-	data     []rune
 	userData []rune
-	edits    []edit //TODO - make this a linked list instead
+	edits    [][]rune //TODO - make this a linked list instead
 }
 
 func newDefaultBuffer(reader io.Reader) *defaultBuffer {
@@ -34,18 +33,12 @@ func newDefaultBuffer(reader io.Reader) *defaultBuffer {
 		panic("Todo: implement error handling")
 	}
 
-	initialEdit := edit{content, 0, len(content)}
-
-	var edits []edit
+	var edits [][]rune
 	if len(content) != 0 {
-		edits = []edit{initialEdit}
+		edits = [][]rune{content}
 	}
 
-	return &defaultBuffer{
-		content,
-		make([]rune, 0),
-		edits,
-	}
+	return &defaultBuffer{make([]rune, 0), edits}
 }
 
 func NewBuffer(reader io.Reader) Buffer {
@@ -66,17 +59,16 @@ func (b *defaultBuffer) Read(from, length int) (text []rune) {
 	indexInText := 0
 	charsToRead := length
 	for _, e := range b.edits {
-		if hasIntersection(from, length, indexInText, e.length) {
+		if hasIntersection(from, length, indexInText, len(e)) {
 			readOffset := max(from, indexInText) - indexInText
-			readBegin := e.dataIndex + readOffset
-			currentReadSize := min(e.length-readOffset, charsToRead)
-			text = append(text, e.data[readBegin:readBegin+currentReadSize]...)
+			currentReadSize := min(len(e)-readOffset, charsToRead)
+			text = append(text, e[readOffset:readOffset+currentReadSize]...)
 			charsToRead -= currentReadSize
 		}
 		if charsToRead == 0 {
 			break
 		}
-		indexInText += e.length
+		indexInText += len(e)
 	}
 	return
 }
@@ -84,10 +76,10 @@ func (b *defaultBuffer) Read(from, length int) (text []rune) {
 func (b *defaultBuffer) Insert(text []rune, from int) {
 	editBegin := len(b.userData)
 	b.userData = append(b.userData, text...)
-	newEdit := edit{b.userData, editBegin, len(text)}
+	newEdit := b.userData[editBegin:]
 
 	if len(b.edits) == 0 {
-		b.edits = []edit{newEdit}
+		b.edits = [][]rune{newEdit}
 	} else {
 		b.edits = insertIntoEdits(b.edits, newEdit, from)
 	}
@@ -97,32 +89,28 @@ func isIndexInEdit(index, editBegin, editLength int) bool {
 	return editBegin <= index && index < editBegin+editLength
 }
 
-func insertIntoEdits(edits []edit, pastedEdit edit, from int) []edit {
-	var newEdits []edit
+func insertIntoEdits(edits [][]rune, pastedEdit []rune, from int) [][]rune {
+	var newEdits [][]rune
 
 	indexInText := 0
 	for _, e := range edits {
-		if isIndexInEdit(from, indexInText, e.length) {
+		if isIndexInEdit(from, indexInText, len(e)) {
 			newEditOffset := from - indexInText
 
-			firstSplitEdit := edit{
-				e.data,
-				indexInText,
-				newEditOffset,
-			}
+			firstSplitEdit := e[0:newEditOffset]
+			secondSplitEdit := e[newEditOffset:]
 
-			secondSplitEdit := edit{
-				e.data,
-				indexInText + newEditOffset,
-				e.length - newEditOffset,
-			}
-
-			newEdits = append(newEdits, firstSplitEdit, pastedEdit, secondSplitEdit)
+			newEdits = append(
+				newEdits,
+				firstSplitEdit,
+				pastedEdit,
+				secondSplitEdit,
+			)
 		} else {
 			newEdits = append(newEdits, e)
 		}
 
-		indexInText += e.length
+		indexInText += len(e)
 	}
 
 	return newEdits
@@ -133,7 +121,20 @@ func (b defaultBuffer) Size() int {
 }
 
 func (b defaultBuffer) Delete(from, length int) {
+	b.edits = getDeletedEdits(b.edits, from, length)
+}
 
+func getDeletedEdits(edits [][]rune, from, length int) [][]rune {
+	textIndex := 0
+	for _, e := range edits {
+		if hasIntersection(from, length, textIndex, len(e)) {
+
+		} else {
+
+		}
+		textIndex += len(e)
+	}
+	return [][]rune{}
 }
 
 func max(a, b int) int {
@@ -150,9 +151,4 @@ func min(a, b int) int {
 	} else {
 		return b
 	}
-}
-
-type edit struct {
-	data              []rune
-	dataIndex, length int
 }
