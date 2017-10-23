@@ -42,4 +42,6 @@ func TestBuffer_DeleteMultiple(t *testing.T) {
 	buf.Insert([]rune("asdf"), 4)
 	buf.Delete(2, 4)
 	assert.Equal(t, "01df456789", string(buf.Read(0, 10)))
+	buf.Delete(1, 4)
+	assert.Equal(t, "056789", string(buf.Read(0, 10)))
 }

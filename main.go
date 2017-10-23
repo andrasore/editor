@@ -2,20 +2,30 @@ package main
 
 import (
 	"editor/core"
-
 	"github.com/nsf/termbox-go"
 )
 
-func printStatus(statusInt int) {
-	//x, y := 0, 0
-	//for _, c := range status.name {
-	//termbox.SetCell(x, y, c, status.fg, status.bg)
-	//x++
-	//}
-	//termbox.Flush()
+func printStatus(statusInt, y int) {
+	var statusName string
+
+	switch statusInt {
+	case core.StatusNormal:
+		statusName = "Normal"
+	case core.StatusInsert:
+		statusName = "Insert"
+	default:
+		statusName = "???"
+	}
+
+	fg := termbox.ColorDefault
+	bg := termbox.ColorDefault
+	for x, c := range statusName {
+		termbox.SetCell(x, y, c, fg, bg)
+	}
+	termbox.Flush()
 }
 
-func printText(text string, x, y int) {
+func printText(text []rune, x, y int) {
 	fg := termbox.ColorDefault
 	bg := termbox.ColorDefault
 	for _, c := range text {
@@ -25,6 +35,17 @@ func printText(text string, x, y int) {
 	termbox.Flush()
 }
 
+func redraw(w *core.Window) {
+	height, width := termbox.Size()
+
+	if w.Height != height || w.Width != width {
+		w.Height = height
+		w.Width = width
+		//TODO - resize?
+	}
+
+}
+
 func main() {
 	err := termbox.Init()
 	if err != nil {
@@ -32,29 +53,31 @@ func main() {
 	}
 	defer termbox.Close()
 
-	state := core.StatusNormal
+	state := StatusNormal
 	printStatus(state)
 
-	//var buffer []rune = make([]rune, 1024)
+	window := core.Window{}
+	var buffer []rune
 
 	running := true
 	for running {
 		ev := termbox.PollEvent()
-		//x, y := termbox.Size()
 
 		switch ev.Type {
 		case termbox.EventKey:
 			switch {
 			case ev.Key == termbox.KeyEsc:
-				state = core.StatusNormal
+				state = StatusNormal
 			case ev.Ch == 'i':
-				state = core.StatusInsert
+				state = StatusInsert
 			case ev.Key == termbox.KeyCtrlC:
 				running = false
 			}
+
 		case termbox.EventResize:
 			termbox.Flush()
 		}
-		printStatus(state)
+
+		redraw(window)
 	}
 }

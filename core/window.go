@@ -1,12 +1,17 @@
 package core
 
 const (
-	StatusNormal = iota
+	StatusNormal = 0
 	StatusInsert = iota
 )
 
+type Cursor struct {
+	X, Y int
+}
+
 type Window struct {
-	width, height    int
-	cursorX, cursorY int
-	buffer           *Buffer
+	Width, Height int
+	Cursor        Cursor
+	StatusBar     []rune
+	Status        int
 }
