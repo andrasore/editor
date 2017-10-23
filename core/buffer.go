@@ -15,7 +15,7 @@ type Buffer interface {
 
 type defaultBuffer struct {
 	userData []rune
-	edits    [][]rune //TODO - make this a linked list instead
+	edits    [][]rune
 }
 
 func newDefaultBuffer(reader io.Reader) *defaultBuffer {
@@ -116,25 +116,37 @@ func insertIntoEdits(edits [][]rune, pastedEdit []rune, from int) [][]rune {
 	return newEdits
 }
 
-func (b defaultBuffer) Size() int {
+func (b *defaultBuffer) Size() int {
 	return 0
 }
 
-func (b defaultBuffer) Delete(from, length int) {
-	b.edits = getDeletedEdits(b.edits, from, length)
+func (b *defaultBuffer) Delete(from, length int) {
+	b.edits = getRemainingEdits(b.edits, from, length)
 }
 
-func getDeletedEdits(edits [][]rune, from, length int) [][]rune {
+func getRemainingEdits(edits [][]rune, delFrom, delLength int) [][]rune {
+	var remainingEdits [][]rune
 	textIndex := 0
 	for _, e := range edits {
-		if hasIntersection(from, length, textIndex, len(e)) {
+		if hasIntersection(delFrom, delLength, textIndex, len(e)) {
+			delTo := delFrom + delLength
+			fromInIndex := isIndexInEdit(delFrom, textIndex, len(e))
+			toInIndex := isIndexInEdit(delTo-1, textIndex, len(e))
 
+			if fromInIndex {
+				splitEdit := e[:delFrom-textIndex]
+				remainingEdits = append(remainingEdits, splitEdit)
+			}
+			if toInIndex {
+				splitEdit := e[delTo-textIndex:]
+				remainingEdits = append(remainingEdits, splitEdit)
+			}
 		} else {
-
+			remainingEdits = append(remainingEdits, e)
 		}
 		textIndex += len(e)
 	}
-	return [][]rune{}
+	return remainingEdits
 }
 
 func max(a, b int) int {
