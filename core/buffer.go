@@ -8,6 +8,7 @@ import (
 
 type Buffer interface {
 	Insert(text []rune, from int)
+	PutChar(char rune, from int)
 	Delete(from, length int)
 	Read(from, length int) []rune
 	Size() int
@@ -16,6 +17,7 @@ type Buffer interface {
 type defaultBuffer struct {
 	userData []rune
 	edits    [][]rune
+	lastEdit *[]rune
 }
 
 func newDefaultBuffer(reader io.Reader) *defaultBuffer {
@@ -38,7 +40,7 @@ func newDefaultBuffer(reader io.Reader) *defaultBuffer {
 		edits = [][]rune{content}
 	}
 
-	return &defaultBuffer{make([]rune, 0), edits}
+	return &defaultBuffer{make([]rune, 0), edits, nil}
 }
 
 func NewBuffer(reader io.Reader) Buffer {
@@ -74,6 +76,14 @@ func (b *defaultBuffer) Read(from, length int) (text []rune) {
 }
 
 func (b *defaultBuffer) Insert(text []rune, from int) {
+	if b.Size() < from {
+		panic("Fix error handling!") //TODO
+	}
+
+	if len(text) == 0 {
+		return //TODO
+	}
+
 	editBegin := len(b.userData)
 	b.userData = append(b.userData, text...)
 	newEdit := b.userData[editBegin:]
@@ -85,8 +95,8 @@ func (b *defaultBuffer) Insert(text []rune, from int) {
 	}
 }
 
-func isIndexInEdit(index, editBegin, editLength int) bool {
-	return editBegin <= index && index < editBegin+editLength
+func (b *defaultBuffer) PutChar(char rune, from int) {
+	b.Insert([]rune{char}, from) //TODO: this sucks!
 }
 
 func insertIntoEdits(edits [][]rune, pastedEdit []rune, from int) [][]rune {
@@ -94,18 +104,21 @@ func insertIntoEdits(edits [][]rune, pastedEdit []rune, from int) [][]rune {
 
 	indexInText := 0
 	for _, e := range edits {
-		if isIndexInEdit(from, indexInText, len(e)) {
+		if isInsertInEdit(from, indexInText, len(e)) {
 			newEditOffset := from - indexInText
 
 			firstSplitEdit := e[0:newEditOffset]
-			secondSplitEdit := e[newEditOffset:]
+			if len(firstSplitEdit) > 0 {
+				newEdits = append(newEdits, firstSplitEdit)
+			}
 
-			newEdits = append(
-				newEdits,
-				firstSplitEdit,
-				pastedEdit,
-				secondSplitEdit,
-			)
+			newEdits = append(newEdits, pastedEdit)
+
+			secondSplitEdit := e[newEditOffset:]
+			if len(secondSplitEdit) > 0 {
+				newEdits = append(newEdits, secondSplitEdit)
+			}
+
 		} else {
 			newEdits = append(newEdits, e)
 		}
@@ -117,7 +130,11 @@ func insertIntoEdits(edits [][]rune, pastedEdit []rune, from int) [][]rune {
 }
 
 func (b *defaultBuffer) Size() int {
-	return 0
+	size := 0
+	for _, e := range b.edits {
+		size += len(e)
+	}
+	return size
 }
 
 func (b *defaultBuffer) Delete(from, length int) {
@@ -147,6 +164,14 @@ func getRemainingEdits(edits [][]rune, delFrom, delLength int) [][]rune {
 		textIndex += len(e)
 	}
 	return remainingEdits
+}
+
+func isInsertInEdit(index, editBegin, editLength int) bool {
+	return editBegin <= index && index <= editBegin+editLength
+}
+
+func isIndexInEdit(index, editBegin, editLength int) bool {
+	return editBegin <= index && index < editBegin+editLength
 }
 
 func max(a, b int) int {

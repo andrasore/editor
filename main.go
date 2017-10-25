@@ -17,7 +17,7 @@ func printStatus(statusInt, y int) {
 		statusName = "???"
 	}
 
-	fg := termbox.ColorDefault
+	fg := termbox.ColorBlack
 	bg := termbox.ColorDefault
 	for x, c := range statusName {
 		termbox.SetCell(x, y, c, fg, bg)
@@ -35,7 +35,7 @@ func printText(text []rune, x, y int) {
 	termbox.Flush()
 }
 
-func redraw(w *core.Window) {
+func redraw(w *core.Window, b *core.Buffer) {
 	height, width := termbox.Size()
 
 	if w.Height != height || w.Width != width {
@@ -44,6 +44,7 @@ func redraw(w *core.Window) {
 		//TODO - resize?
 	}
 
+	printStatus(w.State, w.Height-1)
 }
 
 func main() {
@@ -53,11 +54,9 @@ func main() {
 	}
 	defer termbox.Close()
 
-	state := StatusNormal
-	printStatus(state)
-
 	window := core.Window{}
-	var buffer []rune
+	buffer := core.NewEmptyBuffer()
+	cursor := 0
 
 	running := true
 	for running {
@@ -66,18 +65,21 @@ func main() {
 		switch ev.Type {
 		case termbox.EventKey:
 			switch {
-			case ev.Key == termbox.KeyEsc:
-				state = StatusNormal
-			case ev.Ch == 'i':
-				state = StatusInsert
+			case ev.Key == termbox.KeyEsc && window.State == core.StatusInsert:
+				window.State = core.StatusNormal
+			case ev.Ch == 'i' && window.State == core.StatusNormal:
+				window.State = core.StatusInsert
 			case ev.Key == termbox.KeyCtrlC:
 				running = false
+			default:
+				buffer.Insert([]rune{ev.Ch}, cursor)
+				cursor++
 			}
 
 		case termbox.EventResize:
 			termbox.Flush()
 		}
 
-		redraw(window)
+		redraw(&window, &buffer)
 	}
 }

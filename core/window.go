@@ -13,5 +13,5 @@ type Window struct {
 	Width, Height int
 	Cursor        Cursor
 	StatusBar     []rune
-	Status        int
+	State         int
 }
