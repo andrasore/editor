@@ -63,6 +63,7 @@ func TestBuffer_InsertOne(t *testing.T) {
 func TestBuffer_PutChar(t *testing.T) {
 	buf := core.NewEmptyBuffer()
 	buf.PutChar('a', 0)
+	assert.Equal(t, "a", string(buf.Read(0, 1)))
 	buf.PutChar('b', 1)
 	buf.PutChar('c', 2)
 	assert.Equal(t, "abc", string(buf.Read(0, 3)))
