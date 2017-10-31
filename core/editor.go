@@ -7,8 +7,8 @@ const (
 )
 
 type Editor struct {
-	screen Screen
-	buffer Buffer
+	Screen Screen
+	Buffer Buffer
 	window window
 	state  int
 }
@@ -25,19 +25,19 @@ func (e *Editor) SendChar(c rune) {
 		}
 	case KeyEnter:
 		if e.state == statusInsert {
-			e.buffer.Insert([]rune{'\n'}, e.window.cursor)
+			e.Buffer.Insert([]rune{'\n'}, e.window.cursor)
 			e.window.cursor++
 		}
 	case KeyBackspace:
 		if e.state == statusInsert {
-			e.buffer.Delete(e.window.cursor, e.window.cursor+1)
+			e.Buffer.Delete(e.window.cursor, e.window.cursor+1)
 			e.window.cursor--
 		}
 	default:
-		if window.state == statusInsert {
-			e.buffer.PutChar(c, e.window.cursor)
-			window.cursor++
+		if e.state == statusInsert {
+			e.Buffer.PutChar(c, e.window.cursor)
+			e.window.cursor++
 		}
 	}
-	e.redraw()
+	e.window.redraw(e.Screen, e.Buffer, e.state)
 }

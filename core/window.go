@@ -12,15 +12,16 @@ const (
 
 type Screen interface {
 	SetCell(x, y int, c rune, fg, bg int)
+	SetCursor(x, y int)
 	Size() (int, int)
 	Clear()
 	Flush()
 }
 
-func printStatus(s Screen, statusInt, y int) {
+func (w *window) printStatus(s Screen, status int) {
 	var statusName string
 
-	switch statusInt {
+	switch status {
 	case statusNormal:
 		statusName = "Normal"
 	case statusInsert:
@@ -32,11 +33,17 @@ func printStatus(s Screen, statusInt, y int) {
 	fg := ColorForeground
 	bg := ColorBackground
 	for x, c := range statusName {
-		s.SetCell(x, y, c, fg, bg)
+		s.SetCell(x, w.height-1, c, fg, bg)
 	}
 }
 
-func (w *Window) printText(s Screen, text []rune, left, top int) {
+func (w *window) printCursor(s Screen) {
+	x := w.cursor % w.width
+	y := w.cursor / w.width
+	s.SetCursor(x, y)
+}
+
+func (w *window) printText(s Screen, text []rune, left, top int) {
 	fg := ColorForeground
 	bg := ColorBackground
 
@@ -51,21 +58,21 @@ func (w *Window) printText(s Screen, text []rune, left, top int) {
 			s.SetCell(x, y, c, fg, bg)
 			x++
 		}
-	}
+	} //TODO: wrap text at width
 }
 
-func (w *Window) redraw(s Screen, b core.Buffer) {
+func (w *window) redraw(s Screen, b Buffer, state int) {
 	s.Clear()
 	width, height := s.Size()
 
-	if w.Height != height || w.Width != width {
-		w.Height = height
-		w.Width = width
+	if w.height != height || w.width != width {
+		w.height = height
+		w.width = width
 	}
 
-	printText(s, b.Read(0, b.Size()), 0, 0, width, height)
-	printStatus(w.State, w.Height-1)
-	printCursor(w.State, w.Height-1)
+	w.printText(s, b.Read(0, b.Size()), 0, 0)
+	w.printStatus(s, state)
+	w.printCursor(s)
 	s.Flush()
 }
 

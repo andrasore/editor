@@ -5,9 +5,21 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+func getTermboxColor(coreColor int) termbox.Attribute {
+	switch coreColor {
+	case core.ColorBackground:
+		return termbox.ColorWhite
+	case core.ColorForeground:
+		return termbox.ColorBlack
+	default:
+		return termbox.ColorDefault
+	}
+}
+
 type termboxScreen struct{}
 
 func (t termboxScreen) SetCell(x, y int, c rune, fg, bg int) {
+	termbox.SetCell(x, y, c, getTermboxColor(fg), getTermboxColor(bg))
 }
 
 func (t termboxScreen) Size() (int, int) {
@@ -15,11 +27,17 @@ func (t termboxScreen) Size() (int, int) {
 }
 
 func (t termboxScreen) Clear() {
-	termbox.Clear()
+	fg := termbox.ColorDefault
+	bg := termbox.ColorDefault
+	termbox.Clear(fg, bg)
 }
 
 func (t termboxScreen) Flush() {
+	termbox.Flush()
+}
 
+func (t termboxScreen) SetCursor(x, y int) {
+	termbox.SetCursor(x, y)
 }
 
 func main() {
@@ -29,7 +47,7 @@ func main() {
 	}
 	defer termbox.Close()
 
-	editor := core.Editor{}
+	editor := core.Editor{Screen: termboxScreen{}, Buffer: core.NewEmptyBuffer()}
 
 	editor.SendChar(core.KeyEsc) //TODO: redraw nicely
 

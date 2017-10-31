@@ -17,7 +17,6 @@ type Buffer interface {
 type defaultBuffer struct {
 	userData []rune
 	edits    [][]rune
-	lastEdit *[]rune
 }
 
 func newDefaultBuffer(reader io.Reader) *defaultBuffer {
@@ -40,7 +39,7 @@ func newDefaultBuffer(reader io.Reader) *defaultBuffer {
 		edits = [][]rune{content}
 	}
 
-	return &defaultBuffer{make([]rune, 0), edits, nil}
+	return &defaultBuffer{make([]rune, 0), edits}
 }
 
 func NewBuffer(reader io.Reader) Buffer {
