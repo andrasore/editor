@@ -14,30 +14,27 @@ type Editor struct {
 }
 
 func (e *Editor) SendChar(c rune) {
-	switch c {
-	case KeyEsc:
-		if e.state == statusInsert {
+	switch e.state {
+	case statusInsert:
+		switch c {
+		case KeyEsc:
 			e.state = statusNormal
-		}
-	case 'i':
-		if e.state == statusNormal {
-			e.state = statusInsert
-		}
-	case KeyEnter:
-		if e.state == statusInsert {
+		case KeyEnter:
 			e.Buffer.Insert([]rune{'\n'}, e.window.cursor)
 			e.window.cursor++
-		}
-	case KeyBackspace:
-		if e.state == statusInsert {
-			e.Buffer.Delete(e.window.cursor, e.window.cursor+1)
+		case KeyBackspace:
+			e.Buffer.Delete(e.window.cursor, 1)
 			e.window.cursor--
-		}
-	default:
-		if e.state == statusInsert {
+		default:
 			e.Buffer.PutChar(c, e.window.cursor)
 			e.window.cursor++
 		}
+	case statusNormal:
+		switch c {
+		case 'i':
+			e.state = statusInsert
+		}
 	}
-	e.window.redraw(e.Screen, e.Buffer, e.state)
+
+	e.window.redraw(e.Screen, e.Buffer, e.state, c)
 }

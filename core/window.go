@@ -1,13 +1,16 @@
 package core
 
+import "fmt"
+
 const (
 	statusNormal = 0
 	statusInsert = iota
 )
 
 const (
-	ColorForeground = 0
-	ColorBackground = iota
+	ColorDefault = 0
+	ColorBlack   = iota
+	ColorWhite   = iota
 )
 
 type Screen interface {
@@ -30,8 +33,8 @@ func (w *window) printStatus(s Screen, status int) {
 		statusName = "???"
 	}
 
-	fg := ColorForeground
-	bg := ColorBackground
+	fg := ColorWhite
+	bg := ColorBlack
 	for x, c := range statusName {
 		s.SetCell(x, w.height-1, c, fg, bg)
 	}
@@ -44,8 +47,8 @@ func (w *window) printCursor(s Screen) {
 }
 
 func (w *window) printText(s Screen, text []rune, left, top int) {
-	fg := ColorForeground
-	bg := ColorBackground
+	fg := ColorDefault
+	bg := ColorDefault
 
 	x := left
 	y := top
@@ -61,7 +64,11 @@ func (w *window) printText(s Screen, text []rune, left, top int) {
 	} //TODO: wrap text at width
 }
 
-func (w *window) redraw(s Screen, b Buffer, state int) {
+func (w *window) debugPrintChar(s Screen, c rune) {
+	w.printText(s, []rune(fmt.Sprintf("%d", c)), w.width-4, w.height-1)
+}
+
+func (w *window) redraw(s Screen, b Buffer, state int, lastChar rune) {
 	s.Clear()
 	width, height := s.Size()
 
@@ -73,6 +80,7 @@ func (w *window) redraw(s Screen, b Buffer, state int) {
 	w.printText(s, b.Read(0, b.Size()), 0, 0)
 	w.printStatus(s, state)
 	w.printCursor(s)
+	w.debugPrintChar(s, lastChar)
 	s.Flush()
 }
 

@@ -7,9 +7,11 @@ import (
 
 func getTermboxColor(coreColor int) termbox.Attribute {
 	switch coreColor {
-	case core.ColorBackground:
+	case core.ColorDefault:
+		return termbox.ColorDefault
+	case core.ColorWhite:
 		return termbox.ColorWhite
-	case core.ColorForeground:
+	case core.ColorBlack:
 		return termbox.ColorBlack
 	default:
 		return termbox.ColorDefault
@@ -55,10 +57,27 @@ func main() {
 	for running {
 		ev := termbox.PollEvent()
 		if ev.Type == termbox.EventKey {
-			editor.SendChar(ev.Ch)
+			if ev.Ch != 0 {
+				editor.SendChar(ev.Ch)
+			} else {
+				switch ev.Key {
+				case termbox.KeyEsc:
+					editor.SendChar(core.KeyEsc)
+				case termbox.KeyEnter:
+					editor.SendChar(core.KeyEnter)
+				case termbox.KeyBackspace:
+					editor.SendChar(core.KeyBackspace)
+				case termbox.KeyBackspace2:
+					editor.SendChar(core.KeyBackspace)
+				case termbox.KeySpace:
+					editor.SendChar(' ')
+				case termbox.KeyTab:
+					editor.SendChar('\t')
+				}
+			}
 		}
 		if ev.Key == termbox.KeyCtrlC {
-			running = false
+			running = false //TODO: quit nicely
 		}
 	}
 }
