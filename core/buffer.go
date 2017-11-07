@@ -59,7 +59,7 @@ func hasIntersection(begin1, length1, begin2, length2 int) bool {
 func (b *defaultBuffer) Read(from, length int) (text []rune) {
 	indexInText := 0
 	charsToRead := length
-	for _, e := range b.edits {
+	for _, e := range b.edits { //TODO: implement a sorted list
 		if hasIntersection(from, length, indexInText, len(e)) {
 			readOffset := max(from, indexInText) - indexInText
 			currentReadSize := min(len(e)-readOffset, charsToRead)
@@ -80,7 +80,7 @@ func (b *defaultBuffer) Insert(text []rune, from int) {
 	}
 
 	if len(text) == 0 {
-		return //TODO
+		return
 	}
 
 	editBegin := len(b.userData)

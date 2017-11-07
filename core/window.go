@@ -41,31 +41,39 @@ func (w *window) printStatus(s Screen, status int) {
 }
 
 func (w *window) printCursor(s Screen) {
-	x := w.cursor % w.width
-	y := w.cursor / w.width
-	s.SetCursor(x, y)
+	s.SetCursor(w.cursor.char, w.cursor.line)
 }
 
-func (w *window) printText(s Screen, text []rune, left, top int) {
+func (w *window) printText(s Screen, text []rune, r rectangle) {
 	fg := ColorDefault
 	bg := ColorDefault
 
-	x := left
-	y := top
+	x := r.left
+	y := r.top
 
 	for _, c := range text {
 		if c == '\n' {
-			x = left
+			x = r.left
 			y++
-		} else {
-			s.SetCell(x, y, c, fg, bg)
+		} else if y <= r.bottom {
+			if x <= r.right {
+				s.SetCell(x, y, c, fg, bg)
+			}
 			x++
+		} else {
+			break
 		}
-	} //TODO: wrap text at width
+	}
 }
 
 func (w *window) debugPrintChar(s Screen, c rune) {
-	w.printText(s, []rune(fmt.Sprintf("%d", c)), w.width-4, w.height-1)
+	r := rectangle{
+		left:   w.width - 4,
+		right:  w.width - 1,
+		top:    w.height - 1,
+		bottom: w.height - 1,
+	}
+	w.printText(s, []rune(fmt.Sprintf("%d", c)), r)
 }
 
 func (w *window) redraw(s Screen, b Buffer, state int, lastChar rune) {
@@ -77,14 +85,32 @@ func (w *window) redraw(s Screen, b Buffer, state int, lastChar rune) {
 		w.width = width
 	}
 
-	w.printText(s, b.Read(0, b.Size()), 0, 0)
+	textField := rectangle{
+		left:   0,
+		right:  w.width - 1,
+		top:    0,
+		bottom: w.height - 2,
+	}
+	w.printText(s, b.Read(0, b.Size()), textField)
 	w.printStatus(s, state)
 	w.printCursor(s)
 	w.debugPrintChar(s, lastChar)
 	s.Flush()
 }
 
+type rectangle struct {
+	left, top, right, bottom int
+}
+
+func (r rectangle) contains(x, y int) bool {
+	return r.left <= x && x <= r.right && r.bottom <= y && y <= r.top
+}
+
+type cursor struct {
+	line, char int
+}
+
 type window struct {
 	width, height int
-	cursor        int
+	cursor        cursor
 }
