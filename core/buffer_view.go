@@ -52,5 +52,9 @@ func (bw *defaultBufferView) GetLine(index int) []rune {
 }
 
 func (bw *defaultBufferView) GetCursorIndex(line, char int) int {
-	return bw.lineIndices[line] + char //TODO check indices
+	if line == 0 {
+		return char
+	} else {
+		return bw.lineIndices[line-1] + char + 1 //TODO check indices
+	}
 }
