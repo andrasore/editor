@@ -48,8 +48,20 @@ func TestBufferView_Update(t *testing.T) {
 func TestBufferView_GetCursorIndex(t *testing.T) {
 	tb := testBuffer{[]rune(content)}
 	bw := defaultBufferView{buffer: &tb}
-	bw.Update(0, tb.Size())
-	assert.Equal(t, 3, bw.GetCursorIndex(0, 3))  //line 0, char 3: d
-	assert.Equal(t, 9, bw.GetCursorIndex(1, 3))  //line 1, char 3: d
-	assert.Equal(t, 13, bw.GetCursorIndex(2, 2)) //line 2, char 2: c
+
+	assertCursor := func(expected, line, char int) {
+		index, _ := bw.GetCursorIndex(line, char)
+		assert.Equal(t, expected, index)
+	}
+
+	assertCursor(3, 0, 3)
+	assertCursor(9, 1, 3)
+	assertCursor(13, 2, 2)
+}
+
+func TestBufferView_GetCursorIndex_EmptyBuffer(t *testing.T) {
+	tb := testBuffer{}
+	bw := defaultBufferView{buffer: &tb}
+	index, _ := bw.GetCursorIndex(0, 0)
+	assert.Equal(t, 0, index) //line 0, char 3: d
 }

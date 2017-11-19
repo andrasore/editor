@@ -37,6 +37,11 @@ func TestBuffer_Delete(t *testing.T) {
 	assert.Equal(t, "01256789", string(buf.Read(0, 8)))
 }
 
+func TestBuffer_DeleteEmpty(t *testing.T) {
+	buf := core.NewEmptyBuffer()
+	buf.Delete(3, 2)
+}
+
 func TestBuffer_DeleteMultiple(t *testing.T) {
 	buf := core.NewBuffer(strings.NewReader("0123456789"))
 	buf.Insert([]rune("asdf"), 4)

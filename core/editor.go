@@ -15,24 +15,17 @@ type Editor struct {
 }
 
 func (e *Editor) SendChar(c rune) {
-	char := e.window.cursor.char
-	line := e.window.cursor.line
-	cursorIndex := e.BufferView.GetCursorIndex(char, line)
 	switch e.state {
 	case statusInsert:
 		switch c {
 		case KeyEsc:
 			e.state = statusNormal
 		case KeyEnter:
-			e.Buffer.PutChar('\n', cursorIndex)
-			e.window.cursor.char = 0
-			e.window.cursor.line++
+			e.NewLine()
 		case KeyBackspace:
-			e.Buffer.Delete(cursorIndex, 1)
-			e.window.cursor.char-- //TODO
+			e.DeleteChar()
 		default:
-			e.Buffer.PutChar(c, cursorIndex)
-			e.window.cursor.char++ //TODO
+			e.PutChar(c)
 		}
 	case statusNormal:
 		switch c {
@@ -42,4 +35,45 @@ func (e *Editor) SendChar(c rune) {
 	}
 
 	e.window.redraw(e.Screen, e.Buffer, e.state, c)
+}
+
+func (e *Editor) getCursorIndex() int {
+	char := e.window.cursor.char
+	line := e.window.cursor.line
+	index, err := e.BufferView.GetCursorIndex(line, char)
+	switch err.(type) {
+	case IndexError:
+		panic(err.Error())
+	}
+	return index
+}
+
+func (e *Editor) NewLine() {
+	cursorIndex := e.getCursorIndex()
+	e.Buffer.PutChar('\n', cursorIndex)
+	e.window.cursor.char = 0
+	e.window.cursor.line++
+}
+
+func (e *Editor) DeleteChar() {
+	cursorIndex := e.getCursorIndex()
+	if cursorIndex == 0 {
+		return
+	}
+
+	e.Buffer.Delete(cursorIndex, 1)
+
+	if e.window.cursor.char != 0 {
+		e.window.cursor.char--
+	} else {
+		e.window.cursor.line--
+		line := e.BufferView.GetLine(e.window.cursor.line)
+		e.window.cursor.char = len(line) - 1
+	}
+}
+
+func (e *Editor) PutChar(c rune) {
+	cursorIndex := e.getCursorIndex()
+	e.Buffer.PutChar(c, cursorIndex)
+	e.window.cursor.char++
 }

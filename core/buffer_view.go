@@ -6,12 +6,18 @@ type BufferView interface {
 	GetLine(index int) []rune
 	//GetLinePart(index, from, to int) []rune //TODO
 	Update(from, to int)
-	GetCursorIndex(line, char int) int
+	GetCursorIndex(line, char int) (int, error)
 }
 
 type defaultBufferView struct {
 	buffer      Buffer
 	lineIndices []int
+}
+
+func GetBufferView(buffer Buffer) BufferView {
+	bufferView := defaultBufferView{buffer: buffer}
+	bufferView.Update(0, buffer.Size())
+	return BufferView(&bufferView)
 }
 
 func (bw *defaultBufferView) GetLineCount() int {
@@ -51,10 +57,17 @@ func (bw *defaultBufferView) GetLine(index int) []rune {
 	return bw.buffer.Read(from, to)
 }
 
-func (bw *defaultBufferView) GetCursorIndex(line, char int) int {
-	if line == 0 {
-		return char
+func (bw *defaultBufferView) GetCursorIndex(line, char int) (int, error) {
+	if bw.buffer.Size() == 0 {
+		return 0, EmptyBufferError{}
+	} else if line == 0 {
+		return char, nil
 	} else {
-		return bw.lineIndices[line-1] + char + 1 //TODO check indices
+		cursorIndex := bw.lineIndices[line-1] + char + 1
+		if cursorIndex < bw.buffer.Size() {
+			return cursorIndex, nil
+		} else {
+			return bw.buffer.Size() - 1, IndexError{}
+		}
 	}
 }

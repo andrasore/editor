@@ -6,6 +6,18 @@ import (
 	"strings"
 )
 
+type EmptyBufferError struct{}
+
+func (EmptyBufferError) Error() string {
+	return "Buffer is empty!"
+}
+
+type IndexError struct{}
+
+func (IndexError) Error() string {
+	return "Index is out of bounds!"
+}
+
 type Buffer interface {
 	Insert(text []rune, from int)
 	PutChar(char rune, from int)
