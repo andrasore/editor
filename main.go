@@ -54,7 +54,7 @@ func main() {
 	editor := core.Editor{
 		Screen:     termboxScreen{},
 		Buffer:     buffer,
-		BufferView: core.BufferView(core.GetBufferView(buffer)),
+		BufferView: core.GetBufferView(buffer),
 	}
 
 	editor.SendChar(core.KeyEsc) //TODO: redraw nicely

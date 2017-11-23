@@ -25,6 +25,10 @@ func (bw *defaultBufferView) GetLineCount() int {
 }
 
 func (bw *defaultBufferView) Update(from, to int) {
+	if from != 0 || to != bw.buffer.Size() {
+		panic("TODO - can only be called with full range for now")
+	}
+	bw.lineIndices = nil
 	for i, r := range bw.buffer.Read(from, to) {
 		if r == '\n' {
 			bw.lineIndices = append(bw.lineIndices, i)

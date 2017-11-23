@@ -16,7 +16,7 @@ const (
 type Screen interface {
 	SetCell(x, y int, c rune, fg, bg int)
 	SetCursor(x, y int)
-	Size() (int, int)
+	Size() (width int, height int)
 	Clear()
 	Flush()
 }

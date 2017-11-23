@@ -53,6 +53,7 @@ func (e *Editor) NewLine() {
 	e.Buffer.PutChar('\n', cursorIndex)
 	e.window.cursor.char = 0
 	e.window.cursor.line++
+	e.BufferView.Update(0, e.Buffer.Size())
 }
 
 func (e *Editor) DeleteChar() {
