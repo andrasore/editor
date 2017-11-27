@@ -37,27 +37,22 @@ func (e *Editor) SendChar(c rune) {
 	e.window.redraw(e.Screen, e.Buffer, e.state, c)
 }
 
-func (e *Editor) getCursorIndex() int {
+func (e *Editor) getCursorPosition() int {
 	char := e.window.cursor.char
 	line := e.window.cursor.line
-	index, err := e.BufferView.GetCursorIndex(line, char)
-	switch err.(type) {
-	case IndexError:
-		panic(err.Error())
-	}
-	return index
+	return e.BufferView.GetCursorPosition(line, char)
 }
 
 func (e *Editor) NewLine() {
-	cursorIndex := e.getCursorIndex()
-	e.Buffer.PutChar('\n', cursorIndex)
+	cursorPosition := e.getCursorPosition()
+	e.Buffer.PutChar('\n', cursorPosition)
 	e.window.cursor.char = 0
 	e.window.cursor.line++
-	e.BufferView.Update(0, e.Buffer.Size())
+	e.BufferView.Update(0, e.Buffer.Size()) //TODO
 }
 
 func (e *Editor) DeleteChar() {
-	cursorIndex := e.getCursorIndex()
+	cursorIndex := e.getCursorPosition()
 	if cursorIndex == 0 {
 		return
 	}
@@ -74,7 +69,7 @@ func (e *Editor) DeleteChar() {
 }
 
 func (e *Editor) PutChar(c rune) {
-	cursorIndex := e.getCursorIndex()
+	cursorIndex := e.getCursorPosition()
 	e.Buffer.PutChar(c, cursorIndex)
 	e.window.cursor.char++
 }

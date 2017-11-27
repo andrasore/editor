@@ -74,6 +74,21 @@ func TestBuffer_DeleteMultiple(t *testing.T) {
 	assert.Equal(t, "056789", string(buf.Read(0, 10)))
 }
 
+func TestBuffer_DeleteAcrossInserts(t *testing.T) {
+	buf := NewBuffer(strings.NewReader("123"))
+	buf.Insert([]rune("456"), 2)
+	buf.Insert([]rune("789"), 5)
+	buf.Delete(2, 5)
+	assert.Equal(t, "1289", string(buf.Read(0, 4)))
+}
+
+func TestBuffer_DeleteWholeInsert(t *testing.T) {
+	buf := NewBuffer(strings.NewReader("123"))
+	buf.Insert([]rune("456"), 2)
+	buf.Delete(3, 3)
+	assert.Equal(t, "123", string(buf.Read(0, 4)))
+}
+
 func TestBuffer_Size(t *testing.T) {
 	buf := NewBuffer(strings.NewReader("0123456789"))
 	buf.Insert([]rune("asdf"), 0)

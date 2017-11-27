@@ -6,7 +6,7 @@ type BufferView interface {
 	GetLine(index int) []rune
 	//GetLinePart(index, from, to int) []rune //TODO
 	Update(from, to int)
-	GetCursorIndex(line, char int) (int, error)
+	GetCursorPosition(line, char int) int
 }
 
 type defaultBufferView struct {
@@ -14,7 +14,7 @@ type defaultBufferView struct {
 	lineIndices []int
 }
 
-func GetBufferView(buffer Buffer) BufferView {
+func NewBufferView(buffer Buffer) BufferView {
 	bufferView := defaultBufferView{buffer: buffer}
 	bufferView.Update(0, buffer.Size())
 	return BufferView(&bufferView)
@@ -38,40 +38,40 @@ func (bw *defaultBufferView) Update(from, to int) {
 
 func (bw *defaultBufferView) GetLine(index int) []rune {
 	lastLineIndex := len(bw.lineIndices)
-
 	var from, to int
 
 	switch {
+	case index == 0 && lastLineIndex == 0:
+		from = 0
+		to = bw.buffer.Size()
 	case index == 0:
 		from = 0
 		to = bw.lineIndices[0]
-
 	case index < lastLineIndex:
 		from = bw.lineIndices[index-1] + 1
 		to = bw.lineIndices[index]
-
 	case index == lastLineIndex:
 		from = bw.lineIndices[index-1] + 1
 		to = bw.buffer.Size()
-
 	default:
-		from, to = 0, 0 //TODO
+		panic("GetLine index out of bounds!")
 	}
 
 	return bw.buffer.Read(from, to)
 }
 
-func (bw *defaultBufferView) GetCursorIndex(line, char int) (int, error) {
+func (bw *defaultBufferView) GetCursorPosition(line, char int) int {
 	if bw.buffer.Size() == 0 {
-		return 0, EmptyBufferError{}
-	} else if line == 0 {
-		return char, nil
+		return 0
+	}
+
+	if bw.GetLineCount() <= line || len(bw.GetLine(line)) < char {
+		panic("GetCursorPosition index out of bounds!")
+	}
+
+	if line == 0 {
+		return char
 	} else {
-		cursorIndex := bw.lineIndices[line-1] + char + 1
-		if cursorIndex < bw.buffer.Size() {
-			return cursorIndex, nil
-		} else {
-			return bw.buffer.Size() - 1, IndexError{}
-		}
+		return bw.lineIndices[line-1] + char + 1
 	}
 }

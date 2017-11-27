@@ -43,5 +43,20 @@ func (s *testScreen) Clear() {
 func (s *testScreen) Flush() {
 }
 
-func TestEditor(t *testing.T) {
+func getEditor(s *testScreen) Editor {
+	buffer := NewEmptyBuffer()
+	bufferView := NewBufferView(buffer)
+	return Editor{
+		Screen:     s,
+		Buffer:     buffer,
+		BufferView: bufferView,
+	}
+}
+
+func ExamplePutChar(t *testing.T) {
+	s := testScreen{}
+	ed := getEditor(&s)
+	ed.PutChar('X')
+	ed.PutChar('X')
+	s.Print()
 }

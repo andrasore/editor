@@ -32,58 +32,64 @@ func (b testBuffer) Delete(int, int) {
 const content = "abcde\n" +
 	"abcd\n" +
 	"abc\n" +
-	"ab"
+	"ab\n"
 
 func TestBufferView_Update(t *testing.T) {
 	tb := testBuffer{[]rune(content)}
 	bw := defaultBufferView{buffer: &tb}
 	bw.Update(0, tb.Size())
-	assert.Equal(t, 4, bw.GetLineCount())
+	assert.Equal(t, 5, bw.GetLineCount())
 	assert.Equal(t, "abcde", string(bw.GetLine(0)))
 	assert.Equal(t, "abcd", string(bw.GetLine(1)))
 	assert.Equal(t, "abc", string(bw.GetLine(2)))
 	assert.Equal(t, "ab", string(bw.GetLine(3)))
+	assert.Equal(t, "", string(bw.GetLine(4)))
+}
+
+func TestBufferView_GetLine_WithNoNewline(t *testing.T) {
+	tb := testBuffer{[]rune("abcd")}
+	bw := NewBufferView(tb)
+	assert.Equal(t, "abcd", string(bw.GetLine(0)))
 }
 
 type coord struct {
 	line, char int
 }
 
-type expected struct {
-	index int
-	char  rune
-}
-
-func TestBufferView_GetCursorIndex(t *testing.T) {
+func TestBufferView_GetCursorPosition(t *testing.T) {
 	tb := testBuffer{[]rune(content)}
-	bw := GetBufferView(tb)
+	bw := NewBufferView(tb)
 
-	assertCursor := func(expected expected, testInput coord) {
-		index, _ := bw.GetCursorIndex(testInput.line, testInput.char)
-		assert.Equal(t, expected.index, index)
-		assert.Equal(t, expected.char, tb.Read(index, index+1)[0])
+	assertCursor := func(expected int, testInput coord) {
+		index := bw.GetCursorPosition(testInput.line, testInput.char)
+		assert.Equal(t, expected, index)
 	}
 
-	//first index should be zero
-	assertCursor(expected{0, 'a'}, coord{0, 0})
-
 	//index in first line is equal to char number
-	assertCursor(expected{3, 'd'}, coord{0, 3})
+	assertCursor(0, coord{0, 0})
+	assertCursor(3, coord{0, 3})
 
 	//index after last char in line should return index of newline
-	assertCursor(expected{5, '\n'}, coord{0, 5})
+	assertCursor(5, coord{0, 5})
 
 	//all lines should behave in a similar manner
-	assertCursor(expected{6, 'a'}, coord{1, 0})
-	assertCursor(expected{9, 'd'}, coord{1, 3})
-	assertCursor(expected{10, '\n'}, coord{1, 4})
-	assertCursor(expected{13, 'c'}, coord{2, 2})
-	//TODO - if newline is the last char
+	assertCursor(6, coord{1, 0})
+	assertCursor(9, coord{1, 3})
+	assertCursor(10, coord{1, 4})
+	assertCursor(13, coord{2, 2})
 }
 
-func TestBufferView_GetCursorIndex_EmptyBuffer(t *testing.T) {
+func TestBufferView_GetCursorPosition_EmptyBuffer(t *testing.T) {
 	tb := testBuffer{}
 	bw := defaultBufferView{buffer: &tb}
-	index, _ := bw.GetCursorIndex(0, 0)
-	assert.Equal(t, 0, index) //line 0, char 3: d
+	position := bw.GetCursorPosition(0, 0)
+	assert.Equal(t, 0, position)
+}
+
+func TestBufferView_GetCursorPosition_Overindexing(t *testing.T) {
+	tb := testBuffer{[]rune(content)}
+	bw := NewBufferView(tb)
+	assert.Panics(t, func() { bw.GetCursorPosition(0, 6) })
+	assert.Panics(t, func() { bw.GetCursorPosition(1, 5) })
+	assert.Panics(t, func() { bw.GetCursorPosition(2, 4) })
 }
