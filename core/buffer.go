@@ -6,23 +6,11 @@ import (
 	"strings"
 )
 
-type EmptyBufferError struct{}
-
-func (EmptyBufferError) Error() string {
-	return "Buffer is empty!"
-}
-
-type IndexError struct{}
-
-func (IndexError) Error() string {
-	return "Index is out of bounds!"
-}
-
 type Buffer interface {
 	Insert(text []rune, from int)
 	PutChar(char rune, from int)
-	Delete(from, length int)
-	Read(from, length int) []rune
+	Delete(from, to int)
+	Read(from, to int) []rune
 	Size() int
 }
 
@@ -62,17 +50,19 @@ func NewEmptyBuffer() Buffer {
 	return NewBuffer(strings.NewReader(""))
 }
 
-func hasIntersection(begin1, length1, begin2, length2 int) bool {
-	end1 := begin1 + length1
+func hasIntersection(begin1, end1, begin2, length2 int) bool {
 	end2 := begin2 + length2
 	return begin1 < end2 && begin2 < end1
 }
 
-func (b *defaultBuffer) Read(from, length int) (text []rune) {
+func (b *defaultBuffer) Read(from, to int) (text []rune) {
+	if to < from || from < 0 {
+		panic("Invalid indices for read!")
+	}
+	charsToRead := to - from
 	indexInText := 0
-	charsToRead := length
-	for _, e := range b.edits { //TODO: implement a sorted list
-		if hasIntersection(from, length, indexInText, len(e)) {
+	for _, e := range b.edits { //TODO: implement a linked list
+		if hasIntersection(from, to, indexInText, len(e)) {
 			readOffset := max(from, indexInText) - indexInText
 			currentReadSize := min(len(e)-readOffset, charsToRead)
 			text = append(text, e[readOffset:readOffset+currentReadSize]...)
@@ -86,11 +76,11 @@ func (b *defaultBuffer) Read(from, length int) (text []rune) {
 	return
 }
 
-func (b *defaultBuffer) Insert(text []rune, from int) {
-	if b.Size() < from {
-		panic("Fix error handling!") //TODO
-	}
+func (b *defaultBuffer) PutChar(char rune, from int) {
+	b.Insert([]rune{char}, from)
+} //TODO: this sucks! - remembering last insert position would be nice
 
+func (b *defaultBuffer) Insert(text []rune, from int) {
 	if len(text) == 0 {
 		return
 	}
@@ -106,16 +96,12 @@ func (b *defaultBuffer) Insert(text []rune, from int) {
 	}
 }
 
-func (b *defaultBuffer) PutChar(char rune, from int) {
-	b.Insert([]rune{char}, from) //TODO: this sucks!
-}
-
 func insertIntoEdits(edits [][]rune, pastedEdit []rune, from int) [][]rune {
 	var newEdits [][]rune
 
 	indexInText := 0
 	for _, e := range edits {
-		if isInsertInEdit(from, indexInText, len(e)) {
+		if containsIndex(from, indexInText, len(e)) {
 			newEditOffset := from - indexInText
 
 			firstSplitEdit := e[0:newEditOffset]
@@ -129,7 +115,6 @@ func insertIntoEdits(edits [][]rune, pastedEdit []rune, from int) [][]rune {
 			if len(secondSplitEdit) > 0 {
 				newEdits = append(newEdits, secondSplitEdit)
 			}
-
 		} else {
 			newEdits = append(newEdits, e)
 		}
@@ -148,28 +133,33 @@ func (b *defaultBuffer) Size() int {
 	return size
 }
 
-func (b *defaultBuffer) Delete(from, length int) {
-	b.edits = getRemainingEdits(b.edits, from, length)
+func (b *defaultBuffer) Delete(from, to int) {
+	if to < from || from < 0 {
+		panic("Invalid indices for delete!")
+	}
+
+	b.edits = getRemainingEdits(b.edits, from, to)
 }
 
-func getRemainingEdits(edits [][]rune, delFrom, delLength int) [][]rune {
+func getRemainingEdits(edits [][]rune, delFrom, delTo int) [][]rune {
 	var remainingEdits [][]rune
+	isDeleting := false
 	textIndex := 0
 	for _, e := range edits {
-		if hasIntersection(delFrom, delLength, textIndex, len(e)) {
-			delTo := delFrom + delLength
-			fromInIndex := isIndexInEdit(delFrom, textIndex, len(e))
-			toInIndex := isIndexInEdit(delTo-1, textIndex, len(e))
-
+		fromInIndex := containsIndex(delFrom, textIndex, len(e))
+		toInIndex := containsIndex(delTo-1, textIndex, len(e))
+		if fromInIndex || toInIndex {
 			if fromInIndex {
 				splitEdit := e[:delFrom-textIndex]
 				remainingEdits = append(remainingEdits, splitEdit)
+				isDeleting = true
 			}
 			if toInIndex {
 				splitEdit := e[delTo-textIndex:]
 				remainingEdits = append(remainingEdits, splitEdit)
+				isDeleting = false
 			}
-		} else {
+		} else if !isDeleting {
 			remainingEdits = append(remainingEdits, e)
 		}
 		textIndex += len(e)
@@ -177,11 +167,7 @@ func getRemainingEdits(edits [][]rune, delFrom, delLength int) [][]rune {
 	return remainingEdits
 }
 
-func isInsertInEdit(index, editBegin, editLength int) bool {
-	return editBegin <= index && index <= editBegin+editLength
-}
-
-func isIndexInEdit(index, editBegin, editLength int) bool {
+func containsIndex(index, editBegin, editLength int) bool {
 	return editBegin <= index && index < editBegin+editLength
 }
 

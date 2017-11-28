@@ -27,7 +27,7 @@ func TestBuffer_ReadMultipleEdit_Parts(t *testing.T) {
 	assert.Equal(t, "0123", string(buf.Read(0, 4)))
 	buf.edits = append(buf.edits, []rune("asdf"))
 	buf.edits = append(buf.edits, []rune("xyxy"))
-	assert.Equal(t, "3asdfxy", string(buf.Read(3, 7)))
+	assert.Equal(t, "3asdfxy", string(buf.Read(3, 10)))
 }
 
 func TestBuffer_Read(t *testing.T) {
@@ -35,8 +35,8 @@ func TestBuffer_Read(t *testing.T) {
 	assert.Equal(t, "0123", string(buf.Read(0, 4)))
 	assert.Equal(t, "", string(buf.Read(0, 0)))
 	assert.Equal(t, "0", string(buf.Read(0, 1)))
-	assert.Equal(t, "12", string(buf.Read(1, 2)))
-	assert.Equal(t, "123", string(buf.Read(1, 3)))
+	assert.Equal(t, "1", string(buf.Read(1, 2)))
+	assert.Equal(t, "12", string(buf.Read(1, 3)))
 }
 
 func TestBuffer_InsertEmpty(t *testing.T) {
@@ -56,21 +56,21 @@ func TestBuffer_Insert(t *testing.T) {
 
 func TestBuffer_Delete(t *testing.T) {
 	buf := NewBuffer(strings.NewReader("0123456789"))
-	buf.Delete(3, 2)
+	buf.Delete(3, 5)
 	assert.Equal(t, "01256789", string(buf.Read(0, 8)))
 }
 
 func TestBuffer_DeleteEmpty(t *testing.T) {
 	buf := NewEmptyBuffer()
-	buf.Delete(3, 2)
+	buf.Delete(3, 5)
 }
 
 func TestBuffer_DeleteMultiple(t *testing.T) {
 	buf := NewBuffer(strings.NewReader("0123456789"))
 	buf.Insert([]rune("asdf"), 4)
-	buf.Delete(2, 4)
+	buf.Delete(2, 6)
 	assert.Equal(t, "01df456789", string(buf.Read(0, 10)))
-	buf.Delete(1, 4)
+	buf.Delete(1, 5)
 	assert.Equal(t, "056789", string(buf.Read(0, 10)))
 }
 
@@ -78,14 +78,14 @@ func TestBuffer_DeleteAcrossInserts(t *testing.T) {
 	buf := NewBuffer(strings.NewReader("123"))
 	buf.Insert([]rune("456"), 2)
 	buf.Insert([]rune("789"), 5)
-	buf.Delete(2, 5)
+	buf.Delete(2, 7)
 	assert.Equal(t, "1289", string(buf.Read(0, 4)))
 }
 
 func TestBuffer_DeleteWholeInsert(t *testing.T) {
 	buf := NewBuffer(strings.NewReader("123"))
 	buf.Insert([]rune("456"), 2)
-	buf.Delete(3, 3)
+	buf.Delete(3, 7)
 	assert.Equal(t, "123", string(buf.Read(0, 4)))
 }
 
