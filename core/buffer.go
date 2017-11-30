@@ -61,6 +61,7 @@ func (b *defaultBuffer) Read(from, to int) (text []rune) {
 	charsToRead := to - from
 	editBegin := 0
 	for _, e := range b.edits {
+		checkZeroLenEdit(e)
 		editEnd := editBegin + len(e)
 		if hasIntersection(from, to, editBegin, editEnd) {
 			readFrom, readTo := intersect(from, to, editBegin, editEnd)
@@ -101,7 +102,9 @@ func insertIntoEdits(edits [][]rune, insertedEdit []rune, from int) [][]rune {
 
 	editBegin := 0
 	for _, e := range edits {
-		if shouldSplitEdit(from, editBegin, len(e)) {
+		checkZeroLenEdit(e)
+		editEnd := editBegin + len(e)
+		if shouldSplitEdit(from, editBegin, editEnd) {
 			offset := from - editBegin
 			newEdits = append(newEdits, e[0:offset], insertedEdit, e[offset:])
 		} else if from == editBegin {
@@ -133,37 +136,30 @@ func (b *defaultBuffer) Delete(from, to int) {
 	if from == to {
 		return
 	}
-	var remainingEdits [][]rune
-	isDeleting := false
+	var newEdits [][]rune
 	editBegin := 0
 	for _, e := range b.edits {
-		fromInIndex := containsIndex(from, editBegin, len(e))
-		toInIndex := containsIndex(to-1, editBegin, len(e))
-		if fromInIndex || toInIndex {
-			if fromInIndex {
-				splitEdit := e[:from-editBegin]
-				remainingEdits = append(remainingEdits, splitEdit)
-				isDeleting = true
+		checkZeroLenEdit(e)
+		editEnd := editBegin + len(e)
+		if hasIntersection(from, to, editBegin, editEnd) {
+			currentFrom, currentTo := intersect(from, to, editBegin, editEnd)
+			fromOffset, toOffset := currentFrom-editBegin, currentTo-editBegin
+			if 0 < fromOffset {
+				newEdits = append(newEdits, e[0:fromOffset])
 			}
-			if toInIndex {
-				splitEdit := e[to-editBegin:]
-				remainingEdits = append(remainingEdits, splitEdit)
-				isDeleting = false
+			if toOffset < len(e) {
+				newEdits = append(newEdits, e[toOffset:])
 			}
-		} else if !isDeleting {
-			remainingEdits = append(remainingEdits, e)
+		} else {
+			newEdits = append(newEdits, e)
 		}
 		editBegin += len(e)
 	}
-	b.edits = remainingEdits
+	b.edits = newEdits
 }
 
-func containsIndex(index, editBegin, editLength int) bool {
-	return editBegin <= index && index < editBegin+editLength
-}
-
-func shouldSplitEdit(insert, editBegin, editLength int) bool {
-	return editBegin < insert && insert < editBegin+editLength-1 //last index
+func shouldSplitEdit(splitAt, editBegin, editEnd int) bool {
+	return editBegin < splitAt && splitAt < editEnd
 }
 
 func hasIntersection(begin1, end1, begin2, end2 int) bool {
@@ -179,6 +175,12 @@ func max(a, b int) int {
 		return b
 	} else {
 		return a
+	}
+}
+
+func checkZeroLenEdit(e []rune) {
+	if len(e) == 0 {
+		panic("zero length edit!")
 	}
 }
 

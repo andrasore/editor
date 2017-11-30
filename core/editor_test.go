@@ -2,29 +2,28 @@ package core
 
 import (
 	"fmt"
-	"testing"
 )
 
 const (
-	screenWidth  = 10
+	screenWidth  = 19
 	screenHeight = 5
 )
 
 type testScreen struct {
-	content [screenWidth][screenHeight]rune
+	content [screenHeight][screenWidth]rune
 	cursorX int
 	cursorY int
 }
 
 func (s *testScreen) Print() {
-	s.content[s.cursorX][s.cursorY] = 'C'
+	//s.content[s.cursorX][s.cursorY] = 'C'
 	for _, line := range s.content {
 		fmt.Println(string(line[:]))
 	}
 }
 
 func (s *testScreen) SetCell(x, y int, c rune, fg, bg int) {
-	s.content[x][y] = c
+	s.content[y][x] = c
 }
 
 func (s *testScreen) SetCursor(x, y int) {
@@ -37,7 +36,7 @@ func (s *testScreen) Size() (width int, height int) {
 }
 
 func (s *testScreen) Clear() {
-	s.content = [screenWidth][screenHeight]rune{}
+	s.content = [screenHeight][screenWidth]rune{}
 }
 
 func (s *testScreen) Flush() {
@@ -53,10 +52,13 @@ func getEditor(s *testScreen) Editor {
 	}
 }
 
-func ExamplePutChar(t *testing.T) {
+func ExamplePutChar() {
 	s := testScreen{}
 	ed := getEditor(&s)
-	ed.PutChar('X')
-	ed.PutChar('X')
+	ed.SendChar('i')
+	ed.SendChar('x')
+	ed.SendChar(KeyBackspace)
+	ed.SendChar('y')
 	s.Print()
+	// Output: y
 }
