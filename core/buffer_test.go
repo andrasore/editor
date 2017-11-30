@@ -52,6 +52,7 @@ func TestBuffer_Insert(t *testing.T) {
 	assert.Equal(t, "asdf012345", string(buf.Read(0, 10)))
 	buf.Insert([]rune("xx"), 2)
 	assert.Equal(t, "asxxdf0123", string(buf.Read(0, 10)))
+	assert.Equal(t, 16, buf.Size())
 }
 
 func TestBuffer_Delete(t *testing.T) {
@@ -76,15 +77,15 @@ func TestBuffer_DeleteMultiple(t *testing.T) {
 
 func TestBuffer_DeleteAcrossInserts(t *testing.T) {
 	buf := NewBuffer(strings.NewReader("123"))
-	buf.Insert([]rune("456"), 2)
-	buf.Insert([]rune("789"), 5)
+	buf.Insert([]rune("456"), 3)
+	buf.Insert([]rune("789"), 6)
 	buf.Delete(2, 7)
 	assert.Equal(t, "1289", string(buf.Read(0, 4)))
 }
 
 func TestBuffer_DeleteWholeInsert(t *testing.T) {
 	buf := NewBuffer(strings.NewReader("123"))
-	buf.Insert([]rune("456"), 2)
+	buf.Insert([]rune("456"), 3)
 	buf.Delete(3, 7)
 	assert.Equal(t, "123", string(buf.Read(0, 4)))
 }
@@ -101,6 +102,7 @@ func TestBuffer_InsertOne(t *testing.T) {
 	buf.Insert([]rune{'b'}, 1)
 	buf.Insert([]rune{'c'}, 2)
 	assert.Equal(t, "abc", string(buf.Read(0, 3)))
+	assert.Equal(t, 3, buf.Size())
 }
 
 func TestBuffer_PutChar(t *testing.T) {
@@ -110,4 +112,5 @@ func TestBuffer_PutChar(t *testing.T) {
 	buf.PutChar('b', 1)
 	buf.PutChar('c', 2)
 	assert.Equal(t, "abc", string(buf.Read(0, 3)))
+	assert.Equal(t, 3, buf.Size())
 }

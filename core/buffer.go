@@ -2,6 +2,7 @@ package core
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -50,28 +51,27 @@ func NewEmptyBuffer() Buffer {
 	return NewBuffer(strings.NewReader(""))
 }
 
-func hasIntersection(begin1, end1, begin2, length2 int) bool {
-	end2 := begin2 + length2
-	return begin1 < end2 && begin2 < end1
-}
-
 func (b *defaultBuffer) Read(from, to int) (text []rune) {
 	if to < from || from < 0 {
-		panic("Invalid indices for read!")
+		panic(fmt.Sprintf("Trying to read from %v to %v", from, to))
+	}
+	if from == to {
+		return
 	}
 	charsToRead := to - from
-	indexInText := 0
-	for _, e := range b.edits { //TODO: implement a linked list
-		if hasIntersection(from, to, indexInText, len(e)) {
-			readOffset := max(from, indexInText) - indexInText
-			currentReadSize := min(len(e)-readOffset, charsToRead)
-			text = append(text, e[readOffset:readOffset+currentReadSize]...)
-			charsToRead -= currentReadSize
+	editBegin := 0
+	for _, e := range b.edits {
+		editEnd := editBegin + len(e)
+		if hasIntersection(from, to, editBegin, editEnd) {
+			readFrom, readTo := intersect(from, to, editBegin, editEnd)
+			readSlice := e[readFrom-editBegin : readTo-editBegin]
+			text = append(text, readSlice...)
+			charsToRead -= readTo - readFrom
 		}
 		if charsToRead == 0 {
 			break
 		}
-		indexInText += len(e)
+		editBegin += len(e)
 	}
 	return
 }
@@ -96,30 +96,23 @@ func (b *defaultBuffer) Insert(text []rune, from int) {
 	}
 }
 
-func insertIntoEdits(edits [][]rune, pastedEdit []rune, from int) [][]rune {
+func insertIntoEdits(edits [][]rune, insertedEdit []rune, from int) [][]rune {
 	var newEdits [][]rune
 
-	indexInText := 0
+	editBegin := 0
 	for _, e := range edits {
-		if containsIndex(from, indexInText, len(e)) {
-			newEditOffset := from - indexInText
-
-			firstSplitEdit := e[0:newEditOffset]
-			if len(firstSplitEdit) > 0 {
-				newEdits = append(newEdits, firstSplitEdit)
-			}
-
-			newEdits = append(newEdits, pastedEdit)
-
-			secondSplitEdit := e[newEditOffset:]
-			if len(secondSplitEdit) > 0 {
-				newEdits = append(newEdits, secondSplitEdit)
-			}
+		if shouldSplitEdit(from, editBegin, len(e)) {
+			offset := from - editBegin
+			newEdits = append(newEdits, e[0:offset], insertedEdit, e[offset:])
+		} else if from == editBegin {
+			newEdits = append(newEdits, insertedEdit, e)
 		} else {
 			newEdits = append(newEdits, e)
 		}
-
-		indexInText += len(e)
+		editBegin += len(e)
+	}
+	if from == editBegin {
+		newEdits = append(newEdits, insertedEdit)
 	}
 
 	return newEdits
@@ -135,40 +128,50 @@ func (b *defaultBuffer) Size() int {
 
 func (b *defaultBuffer) Delete(from, to int) {
 	if to < from || from < 0 {
-		panic("Invalid indices for delete!")
+		panic(fmt.Sprintf("Trying to delete from %v to %v", from, to))
 	}
-
-	b.edits = getRemainingEdits(b.edits, from, to)
-}
-
-func getRemainingEdits(edits [][]rune, delFrom, delTo int) [][]rune {
+	if from == to {
+		return
+	}
 	var remainingEdits [][]rune
 	isDeleting := false
-	textIndex := 0
-	for _, e := range edits {
-		fromInIndex := containsIndex(delFrom, textIndex, len(e))
-		toInIndex := containsIndex(delTo-1, textIndex, len(e))
+	editBegin := 0
+	for _, e := range b.edits {
+		fromInIndex := containsIndex(from, editBegin, len(e))
+		toInIndex := containsIndex(to-1, editBegin, len(e))
 		if fromInIndex || toInIndex {
 			if fromInIndex {
-				splitEdit := e[:delFrom-textIndex]
+				splitEdit := e[:from-editBegin]
 				remainingEdits = append(remainingEdits, splitEdit)
 				isDeleting = true
 			}
 			if toInIndex {
-				splitEdit := e[delTo-textIndex:]
+				splitEdit := e[to-editBegin:]
 				remainingEdits = append(remainingEdits, splitEdit)
 				isDeleting = false
 			}
 		} else if !isDeleting {
 			remainingEdits = append(remainingEdits, e)
 		}
-		textIndex += len(e)
+		editBegin += len(e)
 	}
-	return remainingEdits
+	b.edits = remainingEdits
 }
 
 func containsIndex(index, editBegin, editLength int) bool {
 	return editBegin <= index && index < editBegin+editLength
+}
+
+func shouldSplitEdit(insert, editBegin, editLength int) bool {
+	return editBegin < insert && insert < editBegin+editLength-1 //last index
+}
+
+func hasIntersection(begin1, end1, begin2, end2 int) bool {
+	return begin1 < end2 && begin2 < end1
+}
+
+func intersect(begin1, end1, begin2, end2 int) (int, int) {
+	return max(begin1, begin2), min(end1, end2)
 }
 
 func max(a, b int) int {

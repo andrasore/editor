@@ -1,8 +1,10 @@
 package core
 
+import "fmt"
+
 type BufferView interface {
 	GetLineCount() int
-	//GetLineLength(index int) //TODO
+	GetLineLength(index int) int
 	GetLine(index int) []rune
 	//GetLinePart(index, from, to int) []rune //TODO
 	Update(from, to int)
@@ -60,13 +62,17 @@ func (bw *defaultBufferView) GetLine(index int) []rune {
 	return bw.buffer.Read(from, to)
 }
 
+func (bw *defaultBufferView) GetLineLength(index int) int {
+	return len(bw.GetLine(index))
+}
+
 func (bw *defaultBufferView) GetCursorPosition(line, char int) int {
 	if bw.buffer.Size() == 0 {
 		return 0
 	}
 
-	if bw.GetLineCount() <= line || len(bw.GetLine(line)) < char {
-		panic("GetCursorPosition index out of bounds!")
+	if bw.GetLineCount() <= line || bw.GetLineLength(line) < char {
+		panic(fmt.Sprintf("Out of bounds cursor: line %v, char %v", line, char))
 	}
 
 	if line == 0 {

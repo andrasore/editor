@@ -6,6 +6,13 @@ const (
 	KeyBackspace rune = 0x08
 )
 
+const (
+	DirectionUp    int = iota
+	DirectionRight int = iota
+	DirectionDown  int = iota
+	DirectionLeft  int = iota
+)
+
 type Editor struct {
 	Screen     Screen
 	Buffer     Buffer
@@ -31,10 +38,18 @@ func (e *Editor) SendChar(c rune) {
 		switch c {
 		case 'i':
 			e.state = statusInsert
+		case 'h':
+			e.MoveCursor(DirectionLeft)
+		case 'j':
+			e.MoveCursor(DirectionDown)
+		case 'k':
+			e.MoveCursor(DirectionUp)
+		case 'l':
+			e.MoveCursor(DirectionRight)
 		}
 	}
 
-	e.window.redraw(e.Screen, e.Buffer, e.state, c)
+	e.window.redraw(e.Screen, e.Buffer, e.state, e.Buffer.Size())
 }
 
 func (e *Editor) getCursorPosition() int {
@@ -51,13 +66,25 @@ func (e *Editor) NewLine() {
 	e.BufferView.Update(0, e.Buffer.Size()) //TODO
 }
 
+func (e *Editor) MoveCursor(direction int) {
+	switch direction {
+	case DirectionUp:
+
+	case DirectionDown:
+	case DirectionLeft:
+	case DirectionRight:
+	default:
+		panic("Invalid move direction!")
+	}
+}
+
 func (e *Editor) DeleteChar() {
 	cursorIndex := e.getCursorPosition()
 	if cursorIndex == 0 {
 		return
 	}
 
-	e.Buffer.Delete(cursorIndex, 1)
+	e.Buffer.Delete(cursorIndex-1, cursorIndex)
 
 	if e.window.cursor.char != 0 {
 		e.window.cursor.char--

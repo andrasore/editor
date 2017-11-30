@@ -76,7 +76,17 @@ func (w *window) debugPrintChar(s Screen, c rune) {
 	w.printText(s, []rune(fmt.Sprintf("%d", c)), r)
 }
 
-func (w *window) redraw(s Screen, b Buffer, state int, lastChar rune) {
+func (w *window) debugPrintSize(s Screen, size int) {
+	r := rectangle{
+		left:   w.width - 4,
+		right:  w.width - 1,
+		top:    w.height - 1,
+		bottom: w.height - 1,
+	}
+	w.printText(s, []rune(fmt.Sprintf("%v", size)), r)
+}
+
+func (w *window) redraw(s Screen, b Buffer, state int, size int) {
 	s.Clear()
 	width, height := s.Size()
 
@@ -94,7 +104,8 @@ func (w *window) redraw(s Screen, b Buffer, state int, lastChar rune) {
 	w.printText(s, b.Read(0, b.Size()), textField)
 	w.printStatus(s, state)
 	w.printCursor(s)
-	w.debugPrintChar(s, lastChar)
+	//w.debugPrintChar(s, lastChar)
+	w.debugPrintSize(s, size)
 	s.Flush()
 }
 
