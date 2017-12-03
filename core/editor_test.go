@@ -1,7 +1,9 @@
 package core
 
 import (
-	"fmt"
+	"bufio"
+	"strings"
+	"testing"
 )
 
 const (
@@ -15,10 +17,30 @@ type testScreen struct {
 	cursorY int
 }
 
-func (s *testScreen) Print() {
-	//s.content[s.cursorX][s.cursorY] = 'C'
-	for _, line := range s.content {
-		fmt.Println(string(line[:]))
+func ContentToString(content [screenHeight][screenWidth]rune) string {
+	var s []string
+	for _, line := range content {
+		s = append(s, string(line[:]))
+	}
+	return strings.Join(s, "\n")
+}
+
+func (s *testScreen) Check(t *testing.T, expected string) {
+	scanner := bufio.NewScanner(strings.NewReader(expected))
+	line := 0
+	for scanner.Scan() {
+		for i, expectedChar := range scanner.Text() {
+			contentChar := s.content[line][i]
+			if expectedChar != contentChar {
+				contentString := ContentToString(s.content)
+				t.Fatalf(
+					"\nexpected:\n%v\ngot:\n%v",
+					expected,
+					contentString[0:len(expected)],
+				)
+			}
+		}
+		line++
 	}
 }
 
@@ -52,13 +74,13 @@ func getEditor(s *testScreen) Editor {
 	}
 }
 
-func ExamplePutChar() {
+func TestPutChar(t *testing.T) {
+	expected := "x"
 	s := testScreen{}
 	ed := getEditor(&s)
 	ed.SendChar('i')
 	ed.SendChar('x')
 	ed.SendChar(KeyBackspace)
 	ed.SendChar('y')
-	s.Print()
-	// Output: y
+	s.Check(t, expected)
 }

@@ -67,12 +67,35 @@ func (e *Editor) NewLine() {
 }
 
 func (e *Editor) MoveCursor(direction int) {
+	line := e.window.cursor.line
+	char := e.window.cursor.char
+
 	switch direction {
 	case DirectionUp:
-
+		if 0 < line {
+			e.window.cursor.line--
+			prevLineLength := e.BufferView.GetLineLength(line - 1)
+			if prevLineLength < char {
+				e.window.cursor.char = prevLineLength
+			}
+		}
 	case DirectionDown:
+		if line < e.BufferView.GetLineCount()-1 {
+			e.window.cursor.line++
+			nextLineLength := e.BufferView.GetLineLength(line + 1)
+			if nextLineLength < char {
+				e.window.cursor.char = nextLineLength
+			}
+		}
 	case DirectionLeft:
+		if 0 < char {
+			e.window.cursor.char--
+		}
 	case DirectionRight:
+		currentLineLength := e.BufferView.GetLineLength(line)
+		if char < currentLineLength { //max cursor index equals length
+			e.window.cursor.char++
+		}
 	default:
 		panic("Invalid move direction!")
 	}
