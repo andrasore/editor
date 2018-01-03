@@ -30,7 +30,7 @@ func (e *Editor) SendChar(c rune) {
 		case KeyEnter:
 			e.NewLine()
 		case KeyBackspace:
-			e.DeleteChar()
+			e.DeleteCharBefore()
 		default:
 			e.PutChar(c)
 		}
@@ -55,7 +55,7 @@ func (e *Editor) SendChar(c rune) {
 func (e *Editor) getCursorPosition() int {
 	char := e.window.cursor.char
 	line := e.window.cursor.line
-	return e.BufferView.GetCursorPosition(line, char)
+	return e.BufferView.CursorPosition(line, char)
 }
 
 func (e *Editor) NewLine() {
@@ -74,17 +74,17 @@ func (e *Editor) MoveCursor(direction int) {
 	case DirectionUp:
 		if 0 < line {
 			e.window.cursor.line--
-			prevLineLength := e.BufferView.GetLineLength(line - 1)
-			if prevLineLength < char {
-				e.window.cursor.char = prevLineLength
+			prevLineLength := e.BufferView.LineLength(line - 1)
+			if prevLineLength-1 < char {
+				e.window.cursor.char = prevLineLength - 1
 			}
 		}
 	case DirectionDown:
-		if line < e.BufferView.GetLineCount()-1 {
+		if line < e.BufferView.LineCount()-1 {
 			e.window.cursor.line++
-			nextLineLength := e.BufferView.GetLineLength(line + 1)
-			if nextLineLength < char {
-				e.window.cursor.char = nextLineLength
+			nextLineLength := e.BufferView.LineLength(line + 1)
+			if nextLineLength-1 < char {
+				e.window.cursor.char = nextLineLength - 1
 			}
 		}
 	case DirectionLeft:
@@ -92,8 +92,8 @@ func (e *Editor) MoveCursor(direction int) {
 			e.window.cursor.char--
 		}
 	case DirectionRight:
-		currentLineLength := e.BufferView.GetLineLength(line)
-		if char < currentLineLength { //max cursor index equals length
+		currentLineLength := e.BufferView.LineLength(line)
+		if char < currentLineLength-1 {
 			e.window.cursor.char++
 		}
 	default:
@@ -101,7 +101,7 @@ func (e *Editor) MoveCursor(direction int) {
 	}
 }
 
-func (e *Editor) DeleteChar() {
+func (e *Editor) DeleteCharBefore() {
 	cursorIndex := e.getCursorPosition()
 	if cursorIndex == 0 {
 		return
@@ -113,7 +113,7 @@ func (e *Editor) DeleteChar() {
 		e.window.cursor.char--
 	} else {
 		e.window.cursor.line--
-		line := e.BufferView.GetLine(e.window.cursor.line)
+		line := e.BufferView.Line(e.window.cursor.line)
 		e.window.cursor.char = len(line) - 1
 	}
 }

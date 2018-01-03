@@ -44,6 +44,13 @@ func (w *window) printCursor(s Screen) {
 	s.SetCursor(w.cursor.char, w.cursor.line)
 }
 
+func (w *window) printStatusbar(s Screen) {
+	line := w.height - 1
+	for i := 0; i < w.width; i++ {
+		s.SetCell(i, line, ' ', ColorWhite, ColorBlack)
+	}
+}
+
 func (w *window) printText(s Screen, text []rune, r rectangle) {
 	fg := ColorDefault
 	bg := ColorDefault
@@ -101,6 +108,7 @@ func (w *window) redraw(s Screen, b Buffer, state int, size int) {
 		top:    0,
 		bottom: w.height - 2,
 	}
+	w.printStatusbar(s)
 	w.printText(s, b.Read(0, b.Size()), textField)
 	w.printStatus(s, state)
 	w.printCursor(s)

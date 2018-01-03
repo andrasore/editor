@@ -3,6 +3,7 @@ package main
 import (
 	"editor/core"
 	"github.com/nsf/termbox-go"
+	"os"
 )
 
 func getTermboxColor(coreColor int) termbox.Attribute {
@@ -43,13 +44,24 @@ func (t termboxScreen) SetCursor(x, y int) {
 }
 
 func main() {
+
 	err := termbox.Init()
 	if err != nil {
 		panic(err)
 	}
 	defer termbox.Close()
 
-	buffer := core.NewEmptyBuffer()
+	var buffer core.Buffer
+
+	if len(os.Args) == 2 {
+		file, err := os.Open(os.Args[1])
+		if err != nil {
+			panic("Invalid filename!")
+		}
+		buffer = core.NewBuffer(file)
+	} else {
+		buffer = core.NewEmptyBuffer()
+	}
 
 	editor := core.Editor{
 		Screen:     termboxScreen{},

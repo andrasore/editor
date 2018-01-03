@@ -75,7 +75,7 @@ func getEditor(s *testScreen) Editor {
 }
 
 func TestPutChar(t *testing.T) {
-	expected := "x"
+	expected := "y"
 	s := testScreen{}
 	ed := getEditor(&s)
 	ed.SendChar('i')

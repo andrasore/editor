@@ -3,12 +3,12 @@ package core
 import "fmt"
 
 type BufferView interface {
-	GetLineCount() int
-	GetLineLength(index int) int
-	GetLine(index int) []rune
-	//GetLinePart(index, from, to int) []rune //TODO
+	LineCount() int
+	LineLength(index int) int
+	Line(index int) []rune
+	//LinePart(index, from, to int) []rune //TODO
 	Update(from, to int)
-	GetCursorPosition(line, char int) int
+	CursorPosition(line, char int) int
 }
 
 type defaultBufferView struct {
@@ -22,7 +22,7 @@ func NewBufferView(buffer Buffer) BufferView {
 	return BufferView(&bufferView)
 }
 
-func (bw *defaultBufferView) GetLineCount() int {
+func (bw *defaultBufferView) LineCount() int {
 	return len(bw.lineIndices) + 1
 }
 
@@ -38,7 +38,7 @@ func (bw *defaultBufferView) Update(from, to int) {
 	}
 }
 
-func (bw *defaultBufferView) GetLine(index int) []rune {
+func (bw *defaultBufferView) Line(index int) []rune {
 	lastLineIndex := len(bw.lineIndices)
 	var from, to int
 
@@ -62,16 +62,16 @@ func (bw *defaultBufferView) GetLine(index int) []rune {
 	return bw.buffer.Read(from, to)
 }
 
-func (bw *defaultBufferView) GetLineLength(index int) int {
-	return len(bw.GetLine(index))
+func (bw *defaultBufferView) LineLength(index int) int {
+	return len(bw.Line(index))
 }
 
-func (bw *defaultBufferView) GetCursorPosition(line, char int) int {
+func (bw *defaultBufferView) CursorPosition(line, char int) int {
 	if bw.buffer.Size() == 0 {
 		return 0
 	}
 
-	if bw.GetLineCount() <= line || bw.GetLineLength(line) < char {
+	if bw.LineCount() <= line || bw.LineLength(line) < char {
 		panic(fmt.Sprintf("Out of bounds cursor: line %v, char %v", line, char))
 	}
 

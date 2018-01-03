@@ -38,18 +38,18 @@ func TestBufferView_Update(t *testing.T) {
 	tb := testBuffer{[]rune(content)}
 	bw := defaultBufferView{buffer: &tb}
 	bw.Update(0, tb.Size())
-	assert.Equal(t, 5, bw.GetLineCount())
-	assert.Equal(t, "abcde", string(bw.GetLine(0)))
-	assert.Equal(t, "abcd", string(bw.GetLine(1)))
-	assert.Equal(t, "abc", string(bw.GetLine(2)))
-	assert.Equal(t, "ab", string(bw.GetLine(3)))
-	assert.Equal(t, "", string(bw.GetLine(4)))
+	assert.Equal(t, 5, bw.LineCount())
+	assert.Equal(t, "abcde", string(bw.Line(0)))
+	assert.Equal(t, "abcd", string(bw.Line(1)))
+	assert.Equal(t, "abc", string(bw.Line(2)))
+	assert.Equal(t, "ab", string(bw.Line(3)))
+	assert.Equal(t, "", string(bw.Line(4)))
 }
 
 func TestBufferView_GetLine_WithNoNewline(t *testing.T) {
 	tb := testBuffer{[]rune("abcd")}
 	bw := NewBufferView(tb)
-	assert.Equal(t, "abcd", string(bw.GetLine(0)))
+	assert.Equal(t, "abcd", string(bw.Line(0)))
 }
 
 type coord struct {
@@ -61,7 +61,7 @@ func TestBufferView_GetCursorPosition(t *testing.T) {
 	bw := NewBufferView(tb)
 
 	assertCursor := func(expected int, testInput coord) {
-		index := bw.GetCursorPosition(testInput.line, testInput.char)
+		index := bw.CursorPosition(testInput.line, testInput.char)
 		assert.Equal(t, expected, index)
 	}
 
@@ -82,14 +82,23 @@ func TestBufferView_GetCursorPosition(t *testing.T) {
 func TestBufferView_GetCursorPosition_EmptyBuffer(t *testing.T) {
 	tb := testBuffer{}
 	bw := defaultBufferView{buffer: &tb}
-	position := bw.GetCursorPosition(0, 0)
+	position := bw.CursorPosition(0, 0)
 	assert.Equal(t, 0, position)
 }
 
 func TestBufferView_GetCursorPosition_Overindexing(t *testing.T) {
 	tb := testBuffer{[]rune(content)}
 	bw := NewBufferView(tb)
-	assert.Panics(t, func() { bw.GetCursorPosition(0, 6) })
-	assert.Panics(t, func() { bw.GetCursorPosition(1, 5) })
-	assert.Panics(t, func() { bw.GetCursorPosition(2, 4) })
+	assert.Panics(t, func() { bw.CursorPosition(0, 6) })
+	assert.Panics(t, func() { bw.CursorPosition(1, 5) })
+	assert.Panics(t, func() { bw.CursorPosition(2, 4) })
+}
+
+const emptyLinesContent = "ab\n" + "\n" + "\n"
+
+func TestBufferView_GetCursorPosition_EmptyLines(t *testing.T) {
+	tb := testBuffer{[]rune(emptyLinesContent)}
+	bw := NewBufferView(tb)
+	assert.Equal(t, 3, bw.CursorPosition(1, 0))
+	assert.Equal(t, 4, bw.CursorPosition(2, 0))
 }
