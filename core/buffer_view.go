@@ -7,8 +7,10 @@ type BufferView interface {
 	LineLength(index int) int
 	Line(index int) []rune
 	//LinePart(index, from, to int) []rune //TODO
+	//Text(fromLine, fromChar, toLine, toChar int) []rune
 	Update(from, to int)
-	CursorPosition(line, char int) int
+	IndexOf(line, char int) int
+	PositionOf(index int) (line, char int)
 }
 
 type defaultBufferView struct {
@@ -66,7 +68,7 @@ func (bw *defaultBufferView) LineLength(index int) int {
 	return len(bw.Line(index))
 }
 
-func (bw *defaultBufferView) CursorPosition(line, char int) int {
+func (bw *defaultBufferView) IndexOf(line, char int) int {
 	if bw.buffer.Size() == 0 {
 		return 0
 	}
@@ -80,4 +82,28 @@ func (bw *defaultBufferView) CursorPosition(line, char int) int {
 	} else {
 		return bw.lineIndices[line-1] + char + 1
 	}
+}
+
+func (bw *defaultBufferView) PositionOf(index int) (int, int) {
+	if index == 0 {
+		return 0, 0
+	}
+
+	if index < 0 || bw.buffer.Size() < index {
+		panic(fmt.Sprintf("Index out of bounds for buffer: %v", index))
+	}
+
+	line := func() int {
+		for i := 0; i < len(bw.lineIndices); i++ {
+			if index < bw.lineIndices[i] {
+				return i
+				break
+			}
+		}
+		return len(bw.lineIndices)
+	}()
+
+	char := index - bw.IndexOf(line, 0)
+
+	return line, char
 }

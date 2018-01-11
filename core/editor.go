@@ -7,18 +7,18 @@ const (
 )
 
 const (
-	DirectionUp    int = iota
-	DirectionRight int = iota
-	DirectionDown  int = iota
-	DirectionLeft  int = iota
+	DirectionUp = iota
+	DirectionRight
+	DirectionDown
+	DirectionLeft
 )
 
 type Editor struct {
-	Screen     Screen
-	Buffer     Buffer
-	BufferView BufferView
-	window     window
-	state      int
+	Screen
+	Buffer
+	BufferView
+	window
+	state int
 }
 
 func (e *Editor) SendChar(c rune) {
@@ -55,7 +55,7 @@ func (e *Editor) SendChar(c rune) {
 func (e *Editor) getCursorPosition() int {
 	char := e.window.cursor.char
 	line := e.window.cursor.line
-	return e.BufferView.CursorPosition(line, char)
+	return e.BufferView.IndexOf(line, char)
 }
 
 func (e *Editor) NewLine() {
@@ -106,16 +106,18 @@ func (e *Editor) DeleteCharBefore() {
 	if cursorIndex == 0 {
 		return
 	}
+	cursorIndex--
+	newLine, newChar := e.BufferView.PositionOf(cursorIndex)
 
-	e.Buffer.Delete(cursorIndex-1, cursorIndex)
+	deletedChar := e.Buffer.Read(cursorIndex, cursorIndex+1)[0]
+	e.Buffer.Delete(cursorIndex, cursorIndex+1)
 
-	if e.window.cursor.char != 0 {
-		e.window.cursor.char--
-	} else {
-		e.window.cursor.line--
-		line := e.BufferView.Line(e.window.cursor.line)
-		e.window.cursor.char = len(line) - 1
+	if deletedChar == '\n' {
+		e.BufferView.Update(0, e.Buffer.Size())
 	}
+
+	e.window.cursor.line = newLine
+	e.window.cursor.char = newChar
 }
 
 func (e *Editor) PutChar(c rune) {
