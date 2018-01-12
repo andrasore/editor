@@ -16,8 +16,10 @@ type Buffer interface {
 }
 
 type defaultBuffer struct {
-	userData []rune
-	edits    [][]rune
+	userData   []rune
+	edits      [][]rune
+	lastInsert int
+	lastEdit   *[]rune
 }
 
 func newDefaultBuffer(reader io.Reader) *defaultBuffer {
@@ -40,7 +42,12 @@ func newDefaultBuffer(reader io.Reader) *defaultBuffer {
 		edits = [][]rune{content}
 	}
 
-	return &defaultBuffer{make([]rune, 0), edits}
+	return &defaultBuffer{
+		userData:   make([]rune, 0),
+		edits:      edits,
+		lastInsert: 0,
+		lastEdit:   new([]rune),
+	}
 }
 
 func NewBuffer(reader io.Reader) Buffer {
@@ -79,7 +86,11 @@ func (b *defaultBuffer) Read(from, to int) (text []rune) {
 
 func (b *defaultBuffer) PutChar(char rune, from int) {
 	b.Insert([]rune{char}, from)
-} //TODO: this sucks! - remembering last insert position would be nice
+}
+
+func (b *defaultBuffer) lastEditEnd() int {
+	return b.lastInsert + len(*b.lastEdit)
+}
 
 func (b *defaultBuffer) Insert(text []rune, from int) {
 	if len(text) == 0 {
@@ -88,13 +99,17 @@ func (b *defaultBuffer) Insert(text []rune, from int) {
 
 	editBegin := len(b.userData)
 	b.userData = append(b.userData, text...)
+
 	newEdit := b.userData[editBegin:]
 
-	if len(b.edits) == 0 {
-		b.edits = [][]rune{newEdit}
+	if b.lastEditEnd() == from {
+		*b.lastEdit = append(*b.lastEdit, newEdit...)
 	} else {
 		b.edits = insertIntoEdits(b.edits, newEdit, from)
+		b.lastEdit = &newEdit
 	}
+
+	b.lastInsert = from
 }
 
 func insertIntoEdits(edits [][]rune, insertedEdit []rune, from int) [][]rune {
