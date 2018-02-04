@@ -26,7 +26,6 @@ type editListBuffer struct {
 func NewBuffer(reader io.Reader) Buffer {
 	newBuffer := editListBuffer{
 		data:       make([]rune, 0),
-		edits:      *list.New(),
 		lastInsert: 0,
 		lastEdit:   nil,
 	}
