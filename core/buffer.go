@@ -2,6 +2,7 @@ package core
 
 import (
 	"bufio"
+	"container/list"
 	"fmt"
 	"io"
 	"strings"
@@ -15,14 +16,21 @@ type Buffer interface {
 	Size() int
 }
 
-type defaultBuffer struct {
-	userData   []rune
-	edits      [][]rune
+type editListBuffer struct {
+	data       []rune
+	edits      list.List
+	lastEdit   *list.Element
 	lastInsert int
-	lastEdit   *[]rune
 }
 
-func newDefaultBuffer(reader io.Reader) *defaultBuffer {
+func NewBuffer(reader io.Reader) Buffer {
+	newBuffer := editListBuffer{
+		data:       make([]rune, 0),
+		edits:      *list.New(),
+		lastInsert: 0,
+		lastEdit:   nil,
+	}
+
 	bufioReader := bufio.NewReader(reader)
 	content := make([]rune, 0)
 
@@ -34,31 +42,21 @@ func newDefaultBuffer(reader io.Reader) *defaultBuffer {
 	}
 
 	if err != io.EOF {
-		panic("Todo: implement error handling")
+		return Buffer(&newBuffer)
 	}
 
-	var edits [][]rune
 	if len(content) != 0 {
-		edits = [][]rune{content}
+		newBuffer.edits.PushBack(content)
 	}
 
-	return &defaultBuffer{
-		userData:   make([]rune, 0),
-		edits:      edits,
-		lastInsert: 0,
-		lastEdit:   new([]rune),
-	}
-}
-
-func NewBuffer(reader io.Reader) Buffer {
-	return newDefaultBuffer(reader)
+	return Buffer(&newBuffer)
 }
 
 func NewEmptyBuffer() Buffer {
 	return NewBuffer(strings.NewReader(""))
 }
 
-func (b *defaultBuffer) Read(from, to int) (text []rune) {
+func (b *editListBuffer) Read(from, to int) (text []rune) {
 	if to < from || from < 0 {
 		panic(fmt.Sprintf("Trying to read from %v to %v", from, to))
 	}
@@ -67,110 +65,114 @@ func (b *defaultBuffer) Read(from, to int) (text []rune) {
 	}
 	charsToRead := to - from
 	editBegin := 0
-	for _, e := range b.edits {
-		checkZeroLenEdit(e)
-		editEnd := editBegin + len(e)
+	for e := b.edits.Front(); e != nil; e = e.Next() {
+		edit := e.Value.([]rune)
+		checkZeroLenEdit(edit)
+		editEnd := editBegin + len(edit)
 		if hasIntersection(from, to, editBegin, editEnd) {
 			readFrom, readTo := intersect(from, to, editBegin, editEnd)
-			readSlice := e[readFrom-editBegin : readTo-editBegin]
+			readSlice := edit[readFrom-editBegin : readTo-editBegin]
 			text = append(text, readSlice...)
 			charsToRead -= readTo - readFrom
 		}
 		if charsToRead == 0 {
 			break
 		}
-		editBegin += len(e)
+		editBegin += len(edit)
 	}
 	return
 }
 
-func (b *defaultBuffer) PutChar(char rune, from int) {
+func (b *editListBuffer) PutChar(char rune, from int) {
 	b.Insert([]rune{char}, from)
 }
 
-func (b *defaultBuffer) lastEditEnd() int {
-	return b.lastInsert + len(*b.lastEdit)
+func (b *editListBuffer) lastEditEnd() int {
+	return b.lastInsert + len(b.lastEdit.Value.([]rune))
 }
 
-func (b *defaultBuffer) Insert(text []rune, from int) {
+func (b *editListBuffer) Insert(text []rune, from int) {
 	if len(text) == 0 {
 		return
 	}
+	editBegin := len(b.data)
+	b.data = append(b.data, text...)
 
-	editBegin := len(b.userData)
-	b.userData = append(b.userData, text...)
+	newEdit := b.data[editBegin:]
 
-	newEdit := b.userData[editBegin:]
-
-	if b.lastEditEnd() == from {
-		*b.lastEdit = append(*b.lastEdit, newEdit...)
+	if b.lastEdit != nil && b.lastEditEnd() == from {
+		b.lastEdit.Value = append(b.lastEdit.Value.([]rune), newEdit...)
 	} else {
-		b.edits = insertIntoEdits(b.edits, newEdit, from)
-		b.lastEdit = &newEdit
+		b.insertIntoEdits(newEdit, from)
 	}
 
 	b.lastInsert = from
 }
 
-func insertIntoEdits(edits [][]rune, insertedEdit []rune, from int) [][]rune {
-	var newEdits [][]rune
+func (b *editListBuffer) insertIntoEdits(insertedEdit []rune, from int) {
+	newEdits := list.New()
 
 	editBegin := 0
-	for _, e := range edits {
-		checkZeroLenEdit(e)
-		editEnd := editBegin + len(e)
+	for e := b.edits.Front(); e != nil; e = e.Next() {
+		edit := e.Value.([]rune)
+		checkZeroLenEdit(edit)
+		editEnd := editBegin + len(edit)
 		if shouldSplitEdit(from, editBegin, editEnd) {
 			offset := from - editBegin
-			newEdits = append(newEdits, e[0:offset], insertedEdit, e[offset:])
+			newEdits.PushBack(edit[0:offset])
+			b.lastEdit = newEdits.PushBack(insertedEdit)
+			newEdits.PushBack(edit[offset:])
 		} else if from == editBegin {
-			newEdits = append(newEdits, insertedEdit, e)
+			b.lastEdit = newEdits.PushBack(insertedEdit)
+			newEdits.PushBack(edit)
 		} else {
-			newEdits = append(newEdits, e)
+			newEdits.PushBack(edit)
 		}
-		editBegin += len(e)
+		editBegin += len(edit)
 	}
-	if from == editBegin {
-		newEdits = append(newEdits, insertedEdit)
+	if from == editBegin { //buffer end actually
+		b.lastEdit = newEdits.PushBack(insertedEdit)
 	}
 
-	return newEdits
+	b.edits = *newEdits //TODO: undo here??
 }
 
-func (b *defaultBuffer) Size() int {
+func (b *editListBuffer) Size() int {
 	size := 0
-	for _, e := range b.edits {
-		size += len(e)
+	for e := b.edits.Front(); e != nil; e = e.Next() {
+		size += len(e.Value.([]rune))
 	}
 	return size
 }
 
-func (b *defaultBuffer) Delete(from, to int) {
+func (b *editListBuffer) Delete(from, to int) {
 	if to < from || from < 0 {
 		panic(fmt.Sprintf("Trying to delete from %v to %v", from, to))
 	}
 	if from == to {
 		return
 	}
-	var newEdits [][]rune
+	newEdits := list.New()
 	editBegin := 0
-	for _, e := range b.edits {
-		checkZeroLenEdit(e)
-		editEnd := editBegin + len(e)
+	for e := b.edits.Front(); e != nil; e = e.Next() {
+		edit := e.Value.([]rune)
+		checkZeroLenEdit(edit)
+		editEnd := editBegin + len(edit)
 		if hasIntersection(from, to, editBegin, editEnd) {
 			currentFrom, currentTo := intersect(from, to, editBegin, editEnd)
 			fromOffset, toOffset := currentFrom-editBegin, currentTo-editBegin
 			if 0 < fromOffset {
-				newEdits = append(newEdits, e[0:fromOffset])
+				newEdits.PushBack(edit[0:fromOffset])
 			}
-			if toOffset < len(e) {
-				newEdits = append(newEdits, e[toOffset:])
+			if toOffset < len(edit) {
+				newEdits.PushBack(edit[toOffset:])
 			}
 		} else {
-			newEdits = append(newEdits, e)
+			newEdits.PushBack(edit)
 		}
-		editBegin += len(e)
+		editBegin += len(edit)
 	}
-	b.edits = newEdits
+	b.edits = *newEdits
 }
 
 func shouldSplitEdit(splitAt, editBegin, editEnd int) bool {
