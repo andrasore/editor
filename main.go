@@ -44,7 +44,6 @@ func (t termboxScreen) SetCursor(x, y int) {
 }
 
 func main() {
-
 	err := termbox.Init()
 	if err != nil {
 		panic(err)

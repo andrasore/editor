@@ -45,7 +45,7 @@ func NewBuffer(reader io.Reader) Buffer {
 	}
 
 	if len(content) != 0 {
-		newBuffer.edits.PushBack(content)
+		newBuffer.Insert(content, 0)
 	}
 
 	return Buffer(&newBuffer)
@@ -109,8 +109,6 @@ func (b *editListBuffer) Insert(text []rune, from int) {
 }
 
 func (b *editListBuffer) insertIntoEdits(insertedEdit []rune, from int) {
-	newEdits := list.New()
-
 	editBegin := 0
 	for e := b.edits.Front(); e != nil; e = e.Next() {
 		edit := e.Value.([]rune)
@@ -118,22 +116,17 @@ func (b *editListBuffer) insertIntoEdits(insertedEdit []rune, from int) {
 		editEnd := editBegin + len(edit)
 		if shouldSplitEdit(from, editBegin, editEnd) {
 			offset := from - editBegin
-			newEdits.PushBack(edit[0:offset])
-			b.lastEdit = newEdits.PushBack(insertedEdit)
-			newEdits.PushBack(edit[offset:])
+			b.edits.InsertBefore(edit[0:offset], e)
+			b.lastEdit = b.edits.InsertBefore(insertedEdit, e)
+			e.Value = edit[offset:]
 		} else if from == editBegin {
-			b.lastEdit = newEdits.PushBack(insertedEdit)
-			newEdits.PushBack(edit)
-		} else {
-			newEdits.PushBack(edit)
+			b.lastEdit = b.edits.InsertBefore(insertedEdit, e)
 		}
 		editBegin += len(edit)
 	}
 	if from == editBegin { //buffer end actually
-		b.lastEdit = newEdits.PushBack(insertedEdit)
+		b.lastEdit = b.edits.PushBack(insertedEdit)
 	}
-
-	b.edits = *newEdits //TODO: undo here??
 }
 
 func (b *editListBuffer) Size() int {
@@ -151,7 +144,6 @@ func (b *editListBuffer) Delete(from, to int) {
 	if from == to {
 		return
 	}
-	newEdits := list.New()
 	editBegin := 0
 	for e := b.edits.Front(); e != nil; e = e.Next() {
 		edit := e.Value.([]rune)
@@ -161,17 +153,14 @@ func (b *editListBuffer) Delete(from, to int) {
 			currentFrom, currentTo := intersect(from, to, editBegin, editEnd)
 			fromOffset, toOffset := currentFrom-editBegin, currentTo-editBegin
 			if 0 < fromOffset {
-				newEdits.PushBack(edit[0:fromOffset])
+				newEdits.InsertBefore(edit[0:fromOffset], e)
 			}
 			if toOffset < len(edit) {
-				newEdits.PushBack(edit[toOffset:])
-			}
-		} else {
-			newEdits.PushBack(edit)
+				newEdits.InsertBefore(edit[toOffset:], e)
+			} //TODO
 		}
 		editBegin += len(edit)
 	}
-	b.edits = *newEdits
 }
 
 func shouldSplitEdit(splitAt, editBegin, editEnd int) bool {
