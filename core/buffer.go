@@ -145,6 +145,7 @@ func (b *editListBuffer) Delete(from, to int) {
 		return
 	}
 	editBegin := 0
+	var toRemove []*list.Element
 	for e := b.edits.Front(); e != nil; e = e.Next() {
 		edit := e.Value.([]rune)
 		checkZeroLenEdit(edit)
@@ -152,15 +153,20 @@ func (b *editListBuffer) Delete(from, to int) {
 		if hasIntersection(from, to, editBegin, editEnd) {
 			currentFrom, currentTo := intersect(from, to, editBegin, editEnd)
 			fromOffset, toOffset := currentFrom-editBegin, currentTo-editBegin
-			if 0 < fromOffset {
-				newEdits.InsertBefore(edit[0:fromOffset], e)
-			}
 			if toOffset < len(edit) {
-				newEdits.InsertBefore(edit[toOffset:], e)
-			} //TODO
+				b.edits.InsertAfter(edit[toOffset:], e)
+			}
+			if 0 < fromOffset {
+				b.edits.InsertAfter(edit[0:fromOffset], e)
+			}
+			toRemove = append(toRemove, e)
 		}
 		editBegin += len(edit)
 	}
+	for _, e := range toRemove {
+		b.edits.Remove(e)
+	}
+	b.lastEdit = nil //TODO - is this necessary?
 }
 
 func shouldSplitEdit(splitAt, editBegin, editEnd int) bool {
