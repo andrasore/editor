@@ -153,11 +153,11 @@ func (b *editListBuffer) Delete(from, to int) {
 		if hasIntersection(from, to, editBegin, editEnd) {
 			currentFrom, currentTo := intersect(from, to, editBegin, editEnd)
 			fromOffset, toOffset := currentFrom-editBegin, currentTo-editBegin
-			if toOffset < len(edit) {
-				b.edits.InsertAfter(edit[toOffset:], e)
-			}
 			if 0 < fromOffset {
-				b.edits.InsertAfter(edit[0:fromOffset], e)
+				b.edits.InsertBefore(edit[0:fromOffset], e)
+			} //TODO apparently doesn't work with InsertAfter - why?
+			if toOffset < len(edit) {
+				b.edits.InsertBefore(edit[toOffset:], e)
 			}
 			toRemove = append(toRemove, e)
 		}
