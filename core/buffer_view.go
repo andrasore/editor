@@ -2,13 +2,14 @@ package core
 
 import "fmt"
 
+// BufferView provides methods to access a buffer's lines. It should be updated
+// when buffer content is changed.
+// Newlines are by definition the last characters of a line.
 type BufferView interface {
 	LineCount() int
 	LineLength(index int) int
 	Line(index int) []rune
-	//LinePart(index, from, to int) []rune //TODO
-	//Text(fromLine, fromChar, toLine, toChar int) []rune
-	Update(from, to int)
+	Update()
 	IndexOf(line, char int) int
 	PositionOf(index int) (line, char int)
 }
@@ -20,7 +21,7 @@ type defaultBufferView struct {
 
 func NewBufferView(buffer Buffer) BufferView {
 	bufferView := defaultBufferView{buffer: buffer}
-	bufferView.Update(0, buffer.Size())
+	bufferView.Update()
 	return BufferView(&bufferView)
 }
 
@@ -28,12 +29,9 @@ func (bw *defaultBufferView) LineCount() int {
 	return len(bw.lineIndices) + 1
 }
 
-func (bw *defaultBufferView) Update(from, to int) {
-	if from != 0 || to != bw.buffer.Size() {
-		panic("TODO - can only be called with full range for now")
-	}
+func (bw *defaultBufferView) Update() {
 	bw.lineIndices = nil
-	for i, r := range bw.buffer.Read(from, to) {
+	for i, r := range bw.buffer.Read(0, bw.buffer.Size()) {
 		if r == '\n' {
 			bw.lineIndices = append(bw.lineIndices, i)
 		}
@@ -68,6 +66,7 @@ func (bw *defaultBufferView) LineLength(index int) int {
 	return len(bw.Line(index))
 }
 
+// IndexOf returns the buffer index of the selected character.
 func (bw *defaultBufferView) IndexOf(line, char int) int {
 	if bw.buffer.Size() == 0 {
 		return 0
@@ -84,7 +83,8 @@ func (bw *defaultBufferView) IndexOf(line, char int) int {
 	}
 }
 
-func (bw *defaultBufferView) PositionOf(index int) (int, int) {
+// PositionOf returns the line and char number of a given buffer index.
+func (bw *defaultBufferView) PositionOf(index int) (line, char int) {
 	if index == 0 {
 		return 0, 0
 	}
@@ -93,17 +93,15 @@ func (bw *defaultBufferView) PositionOf(index int) (int, int) {
 		panic(fmt.Sprintf("Index out of bounds for buffer: %v", index))
 	}
 
-	line := func() int {
-		for i := 0; i < len(bw.lineIndices); i++ {
-			if index < bw.lineIndices[i] {
+	line = func() int {
+		for i, line := range bw.lineIndices {
+			if index <= line {
 				return i
-				break
 			}
 		}
 		return len(bw.lineIndices)
 	}()
 
-	char := index - bw.IndexOf(line, 0)
-
-	return line, char
+	char = index - bw.IndexOf(line, 0)
+	return
 }

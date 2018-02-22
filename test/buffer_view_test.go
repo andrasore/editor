@@ -116,10 +116,9 @@ func TestBufferView_PositionOf(t *testing.T) {
 		char  int
 		index int
 	}{
-		{line: 0, char: 0, index: 0},
-		{line: 0, char: 0, index: 3},
-		{line: 1, char: 0, index: 4},
-		{line: 2, char: 0, index: 7},
+		{index: 0, char: 0, line: 0},
+		{index: 3, char: 3, line: 0},
+		{index: 4, char: 0, line: 1},
 	} //we should be able to get position after last newline
 
 	for _, testCase := range testCases {

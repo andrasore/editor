@@ -63,7 +63,7 @@ func (e *Editor) NewLine() {
 	e.Buffer.PutChar('\n', cursorPosition)
 	e.window.cursor.char = 0
 	e.window.cursor.line++
-	e.BufferView.Update(0, e.Buffer.Size()) //TODO
+	e.BufferView.Update()
 }
 
 func (e *Editor) MoveCursor(direction int) {
@@ -113,7 +113,7 @@ func (e *Editor) DeleteCharBefore() {
 	e.Buffer.Delete(cursorIndex, cursorIndex+1)
 
 	if deletedChar == '\n' {
-		e.BufferView.Update(0, e.Buffer.Size())
+		e.BufferView.Update()
 	}
 
 	e.window.cursor.line = newLine
