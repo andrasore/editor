@@ -1,5 +1,7 @@
 package core
 
+import "fmt"
+
 const (
 	KeyEsc       rune = 0x1B
 	KeyEnter     rune = 0x0D
@@ -49,7 +51,7 @@ func (e *Editor) SendChar(c rune) {
 		}
 	}
 
-	e.window.redraw(e.Screen, e.Buffer, e.state, e.Buffer.Size())
+	e.window.redraw(e.Screen, e.BufferView, e.state, e.Buffer.Size())
 }
 
 func (e *Editor) getCursorPosition() int {
@@ -69,23 +71,18 @@ func (e *Editor) NewLine() {
 func (e *Editor) MoveCursor(direction int) {
 	line := e.window.cursor.line
 	char := e.window.cursor.char
-
 	switch direction {
 	case DirectionUp:
 		if 0 < line {
-			e.window.cursor.line--
 			prevLineLength := e.BufferView.LineLength(line - 1)
-			if prevLineLength-1 < char {
-				e.window.cursor.char = prevLineLength - 1
-			}
+			e.window.cursor.char = min(max(prevLineLength-1, 0), char)
+			e.window.cursor.line--
 		}
 	case DirectionDown:
 		if line < e.BufferView.LineCount()-1 {
-			e.window.cursor.line++
 			nextLineLength := e.BufferView.LineLength(line + 1)
-			if nextLineLength-1 < char {
-				e.window.cursor.char = nextLineLength - 1
-			}
+			e.window.cursor.char = min(max(nextLineLength-1, 0), char)
+			e.window.cursor.line++
 		}
 	case DirectionLeft:
 		if 0 < char {
@@ -97,7 +94,7 @@ func (e *Editor) MoveCursor(direction int) {
 			e.window.cursor.char++
 		}
 	default:
-		panic("Invalid move direction!")
+		panic(fmt.Sprintf("Invalid move direction: %v", direction))
 	}
 }
 

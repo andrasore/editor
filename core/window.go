@@ -41,6 +41,14 @@ func (w *window) printStatus(s Screen, status int) {
 }
 
 func (w *window) printCursor(s Screen) {
+	width, _ := s.Size()
+	if w.cursor.char < 0 || w.cursor.char >= width {
+		panic(fmt.Sprintf(
+			"Invalid cursor for screen: (%v, %v)",
+			w.cursor.char,
+			w.cursor.line,
+		))
+	}
 	s.SetCursor(w.cursor.char, w.cursor.line)
 }
 
@@ -93,7 +101,17 @@ func (w *window) debugPrintSize(s Screen, size int) {
 	w.printText(s, []rune(fmt.Sprintf("%v", size)), r)
 }
 
-func (w *window) redraw(s Screen, b Buffer, state int, size int) {
+func (w *window) printCurrentView(s Screen, v BufferView, r rectangle) {
+	for i := 0; i < r.height(); i++ {
+		if i == v.LineCount() {
+			break
+		}
+		lineRect := rectangle{r.left, r.top + i, r.right, r.top + i + 1}
+		w.printText(s, v.Line(i), lineRect)
+	}
+}
+
+func (w *window) redraw(s Screen, v BufferView, state int, size int) {
 	s.Clear()
 	width, height := s.Size()
 
@@ -109,8 +127,8 @@ func (w *window) redraw(s Screen, b Buffer, state int, size int) {
 		bottom: w.height - 2,
 	}
 	w.printStatusbar(s)
-	w.printText(s, b.Read(0, b.Size()), textField)
 	w.printStatus(s, state)
+	w.printCurrentView(s, v, textField)
 	w.printCursor(s)
 	//w.debugPrintChar(s, lastChar)
 	w.debugPrintSize(s, size)
@@ -123,6 +141,10 @@ type rectangle struct {
 
 func (r rectangle) contains(x, y int) bool {
 	return r.left <= x && x <= r.right && r.bottom <= y && y <= r.top
+}
+
+func (r rectangle) height() int {
+	return r.bottom - r.top
 }
 
 type cursor struct {

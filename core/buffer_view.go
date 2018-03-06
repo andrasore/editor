@@ -56,7 +56,7 @@ func (bw *defaultBufferView) Line(index int) []rune {
 		from = bw.lineIndices[index-1] + 1
 		to = bw.buffer.Size()
 	default:
-		panic("GetLine index out of bounds!")
+		panic(fmt.Sprintf("Line index (%v) out of bounds!", index))
 	}
 
 	return bw.buffer.Read(from, to)

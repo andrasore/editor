@@ -181,24 +181,8 @@ func intersect(begin1, end1, begin2, end2 int) (int, int) {
 	return max(begin1, begin2), min(end1, end2)
 }
 
-func max(a, b int) int {
-	if a < b {
-		return b
-	} else {
-		return a
-	}
-}
-
 func checkZeroLenEdit(e []rune) {
 	if len(e) == 0 {
 		panic("zero length edit!")
-	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
 	}
 }
