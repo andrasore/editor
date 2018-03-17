@@ -10,8 +10,9 @@ import (
 
 type Buffer interface {
 	Insert(text []rune, from int)
-	PutChar(char rune, from int)
+	PutChar(char rune, to int)
 	Delete(from, to int)
+	DeleteChar(at int)
 	Read(from, to int) []rune
 	Size() int
 }
@@ -167,6 +168,10 @@ func (b *editListBuffer) Delete(from, to int) {
 		b.edits.Remove(e)
 	}
 	b.lastEdit = nil //TODO - is this necessary?
+}
+
+func (b *editListBuffer) DeleteChar(at int) {
+	b.Delete(at, at+1)
 }
 
 func shouldSplitEdit(splitAt, editBegin, editEnd int) bool {

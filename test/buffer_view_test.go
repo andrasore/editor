@@ -30,6 +30,10 @@ func (b testBuffer) Delete(int, int) {
 	panic("readonly buffer")
 }
 
+func (b testBuffer) DeleteChar(int) {
+	panic("readonly buffer")
+}
+
 const content = "abcde\n" +
 	"abcd\n" +
 	"abc\n" +

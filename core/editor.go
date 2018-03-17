@@ -48,53 +48,66 @@ func (e *Editor) SendChar(c rune) {
 			e.MoveCursor(DirectionUp)
 		case 'l':
 			e.MoveCursor(DirectionRight)
+		case 'x':
+			e.DeleteChar()
 		}
 	}
-
+	e.BufferView.Update() //TODO - update as necessary
 	e.window.redraw(e.Screen, e.BufferView, e.state, e.Buffer.Size())
 }
 
 func (e *Editor) getCursorPosition() int {
-	char := e.window.cursor.char
-	line := e.window.cursor.line
+	char := e.cursor.char
+	line := e.cursor.line
 	return e.BufferView.IndexOf(line, char)
 }
 
 func (e *Editor) NewLine() {
 	cursorPosition := e.getCursorPosition()
 	e.Buffer.PutChar('\n', cursorPosition)
-	e.window.cursor.char = 0
-	e.window.cursor.line++
-	e.BufferView.Update()
+	e.cursor.char = 0
+	e.cursor.line++
 }
 
 func (e *Editor) MoveCursor(direction int) {
-	line := e.window.cursor.line
-	char := e.window.cursor.char
+	line := e.cursor.line
+	char := e.cursor.char
 	switch direction {
 	case DirectionUp:
 		if 0 < line {
 			prevLineLength := e.BufferView.LineLength(line - 1)
-			e.window.cursor.char = min(max(prevLineLength-1, 0), char)
-			e.window.cursor.line--
+			e.cursor.char = min(max(prevLineLength-1, 0), char)
+			e.cursor.line--
 		}
 	case DirectionDown:
 		if line < e.BufferView.LineCount()-1 {
 			nextLineLength := e.BufferView.LineLength(line + 1)
-			e.window.cursor.char = min(max(nextLineLength-1, 0), char)
-			e.window.cursor.line++
+			e.cursor.char = min(max(nextLineLength-1, 0), char)
+			e.cursor.line++
 		}
 	case DirectionLeft:
 		if 0 < char {
-			e.window.cursor.char--
+			e.cursor.char--
 		}
 	case DirectionRight:
 		currentLineLength := e.BufferView.LineLength(line)
 		if char < currentLineLength-1 {
-			e.window.cursor.char++
+			e.cursor.char++
 		}
 	default:
 		panic(fmt.Sprintf("Invalid move direction: %v", direction))
+	}
+}
+
+func (e *Editor) DeleteChar() {
+	if e.LineLength(e.cursor.line) == 0 {
+		return
+	}
+
+	e.Buffer.DeleteChar(e.getCursorPosition())
+
+	if e.LineLength(e.cursor.line) <= e.cursor.char {
+		e.cursor.char = max(e.cursor.char-1, 0)
 	}
 }
 
@@ -106,19 +119,14 @@ func (e *Editor) DeleteCharBefore() {
 	cursorIndex--
 	newLine, newChar := e.BufferView.PositionOf(cursorIndex)
 
-	deletedChar := e.Buffer.Read(cursorIndex, cursorIndex+1)[0]
-	e.Buffer.Delete(cursorIndex, cursorIndex+1)
+	e.Buffer.DeleteChar(cursorIndex)
 
-	if deletedChar == '\n' {
-		e.BufferView.Update()
-	}
-
-	e.window.cursor.line = newLine
-	e.window.cursor.char = newChar
+	e.cursor.line = newLine
+	e.cursor.char = newChar
 }
 
 func (e *Editor) PutChar(c rune) {
 	cursorIndex := e.getCursorPosition()
 	e.Buffer.PutChar(c, cursorIndex)
-	e.window.cursor.char++
+	e.cursor.char++
 }

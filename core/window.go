@@ -135,6 +135,22 @@ func (w *window) redraw(s Screen, v BufferView, state int, size int) {
 	s.Flush()
 }
 
+const ScrollOff = 4
+
+func (w *window) updateScrollPos(newLine int) {
+	if w.scrollPos+ScrollOff > newLine {
+		w.scrollPos = newLine - ScrollOff
+	} else if w.scrollPos+w.height-ScrollOff < newLine {
+		w.scrollPos = newLine + ScrollOff
+	}
+}
+
+func (w *window) SetCursor(line, char int) {
+	w.updateScrollPos(line)
+	w.cursor.line = line
+	w.cursor.char = char
+}
+
 type rectangle struct {
 	left, top, right, bottom int
 }
@@ -154,4 +170,5 @@ type cursor struct {
 type window struct {
 	width, height int
 	cursor        cursor
+	scrollPos     int
 }

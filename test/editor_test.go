@@ -85,3 +85,15 @@ func TestPutChar(t *testing.T) {
 	ed.SendChar('y')
 	s.Check(t, expected)
 }
+
+func TestDeleteLine(t *testing.T) {
+	expected := "x\n"
+	s := testScreen{}
+	ed := getEditor(&s)
+	ed.SendChar('i')
+	ed.SendChar('x')
+	ed.SendChar(core.KeyEnter)
+	ed.SendChar(core.KeyEnter)
+	ed.SendChar(core.KeyBackspace)
+	s.Check(t, expected)
+}
